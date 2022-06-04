@@ -1,45 +1,42 @@
 #makefile for main, extr, phi, minitest and tinytest
+
+
 CXX       = clang++
-CXXFLAGES = -std=c++11 -O3
-FOMP      = -fopenmp
-OMP_INCL  = -I/usr/local/opt/libomp/include
-LLVM_INCL = -I/usr/local/opt/llvm/include
-FFTW_INCL = -I/usr/local/include
-OBJS      = mracs_primary.o read_in_simdata.o kernel.o fourier.o
-MKL_LINK  = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -ltbb -lstdc++ -lpthread -lm
+OPTIMIZE  = -fopenmp -std=c++11 -O3 
 
-#SRCS=tool.cc support.cc
-#OBJS=$(subst .cc,.o,$(SRCS))
-all: mracs main counting
-.PHONY: all
+#OMP_INCL  = -I/usr/local/opt/libomp/include
+#LLVM_INCL = -I/usr/local/opt/llvm/include
+#FFTW_INCL = -I/usr/local/include
 
-mracs: $(OBJS) mracs.o
-	$(CXX) $(FOMP) $(CXXFLAGES) $(OBJS) mracs.o -o mracs $(LLVM_INCL) $(OMP_INCL) $(FFTW_INCL) $(MKL_LINK)
-main: main.o kernel.o fourier.o mracs_primary.o
-	$(CXX) $(CXXFLAGES) main.o kernel.o fourier.o mracs_primary.o -o main
-counting: $(OBJS) counting.o
-	$(CXX) $(FOMP) $(CXXFLAGES) $(OBJS) counting.o -o counting $(LLVM_INCL) $(OMP_INCL) $(FFTW_INCL) $(MKL_LINK)
+#MRACS used Intel MKL lib for FFT
+MKL_ROOT  = /opt/intel/oneapi/mkl/latest
+MKL_PATH  = $(MKL_ROOT)/lib
+MKL_INCL  = $(MKL_ROOT)/include
+MKL_LINK  = -L$(MKL_PATH) -Wl,-rpath,$(MKL_PATH) -lmkl_cdft_core -lmkl_intel_lp64 \
+            -lmkl_intel_thread -lmkl_core -lpthread -lm -ldl
 
+#MRACS source files 
+SRC_DIR   = src
+BUILD_DIR = build
+SRCS      = mracs_primary.cpp read_in_simdata.cpp kernel.cpp fourier.cpp
+OBJS     := $(subst .cpp,.o,$(SRCS))
+SRCS     := $(addprefix $(SRC_DIR)/, $(SRCS))
+OBJS     := $(addprefix $(BUILD_DIR)/, $(OBJS))
 
-mracs.o: mracs.cpp mracs.hpp
-	$(CXX) $(FOMP) $(CXXFLAGES) -c mracs.cpp $(LLVM_INCL) $(OMP_INCL) $(FFTW_INCL)
-mracs_primary.o: mracs_primary.cpp mracs.hpp
-	$(CXX) $(FOMP) $(CXXFLAGES) -c mracs_primary.cpp $(LLVM_INCL) $(OMP_INCL) $(FFTW_INCL)
-read_in_simdata.o: read_in_simdata.cpp mracs.hpp
-	$(CXX) $(CXXFLAGES) -c read_in_simdata.cpp $(FFTW_INCL)
-main.o: main.cpp mracs.hpp
-	$(CXX) $(CXXFLAGES) -c main.cpp
-counting.o: counting.cpp mracs.hpp
-	$(CXX) $(FOMP) $(CXXFLAGES) -c counting.cpp $(LLVM_INCL) $(OMP_INCL) $(FFTW_INCL)
-kernel.o: kernel.cpp
-	$(CXX) $(CXXFLAGES) -c kernel.cpp
-fourier.o: fourier.cpp
-	$(CXX) $(CXXFLAGES) -c fourier.cpp
+#MRACS binary files
+BINS     := mracs counting
 
+.PHONY: all clean cleanall
+all: mracs counting
 
-.PHONY: cleanall clean 
+%: $(OBJS) $(BUILD_DIR)/%.o
+	$(CXX) $(OPTIMIZE) $(MKL_LINK) $^ -o $@
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(OPTIMIZE) -c $^ -o $@ 
 
 cleanall: clean
-	rm -f mracs main counting
+	rm -f $(BINS)
+
 clean:
-	rm -f *.o
+	rm -rf $(BUILD_DIR)
