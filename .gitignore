@@ -1,0 +1,13 @@
+#vscode files
+.vscode/
+*.json
+.DS_Store
+
+#build directory
+build/
+
+#binary directory
+bin/
+
+#wavelets files
+wfile/

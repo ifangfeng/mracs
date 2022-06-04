@@ -1,0 +1,20 @@
+%---MRA_Resolution
+Resolution                      9
+
+%---Daubechies_Wavelet_phi
+phiGenus                        4
+SampRate                        1000
+
+%---Convolution_Kernel
+KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian
+Radius                          8 % Mpc/h
+
+%---Main_Directory
+DIREC                           /Users/feng/Public/
+
+%---Particle_data
+MilleCata                       ./simdata/croton_etal/croton_etal.ugriz.mini.bin
+SimBoxL                         62.5 % Mpc/h
+
+%---Number_of_threads_used
+Threads                         4
