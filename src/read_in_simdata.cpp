@@ -10,7 +10,7 @@
 //---------------------------------------------------------------------------------------
 std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string MilleCata)
 {
-    std::string ipfname {DIREC + MilleCata};
+    std::string ipfname {MilleCata};
     std::ifstream ifs {ipfname, std::ios_base::binary};
     if(!ifs) 
     {   

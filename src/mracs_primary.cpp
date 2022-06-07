@@ -122,14 +122,14 @@ void read_parameter()
 //|||||||||||||||||||||||||||||| read in wavelets phi data ||||||||||||||||||||||||||||||
 //=======================================================================================
 //---- numerical value of Daubechies scaling function of genus X, locate in closed
-//---- interval [0, 2X-1] with sampling rate 1000 points per unit length (points / 1)
+//---- interval [0, 2X-1] with sampling rate 10000 points per unit length (points / 1)
 //---------------------------------------------------------------------------------------
 std::vector<double> read_in_phi(const int phiGenus, const std::string DIREC)
 {
     const int phiStart   {0};                     //Wavelet Phi0() has compact support, 
     const int phiEnd     {2*phiGenus - 1};        //start in x == 0, end in phi_end == 2n-1
     const int phiSupport {phiEnd - phiStart};     //Wavelet Phi0() has compact support 
-    const int SampRate   {1000};                  //Wavelet Phi sampling rate (points / 1)
+    //const int SampRate   {1000};                  //Wavelet Phi sampling rate (points / 1)
 
     std::vector<int> step(phiSupport);
     for(int i = 0; i < phiSupport; ++i)
@@ -169,7 +169,7 @@ double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<doub
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
     const int phiSupport = phiEnd - phiStart;
-    const int SampRate   = (phi.size() - 2) / phiSupport;
+    //const int SampRate   = (phi.size() - 2) / phiSupport;
     const double ScaleFactor {L/SimBoxL};   //used to rescale particle coordinates
 
     std::vector<int> step(phiSupport);
@@ -185,7 +185,10 @@ double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<doub
 
     double s_temp[phiSupport * phiSupport * phiSupport];        // openmp seems not allow Array Reductions allocated on heap
 
+    #ifdef IN_PARALLEL
     #pragma omp parallel for reduction (+:s_temp)
+    #endif
+    
     for(int n = 0; n < p.size(); ++n)
     {
         for(int ii = 0; ii < phiSupport * phiSupport * phiSupport; ++ii) s_temp[ii] = 0;
@@ -308,54 +311,68 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k)
 double* window_function_coefficients(std::vector<double>& phi, const int J, const double SimBoxL, const double Radius)
 {
     const int L {1<<J};
+    const int bandwidth = 1;
     const double DeltaXi = 1./(L);
     const double rescaleR {Radius * L / SimBoxL};
 
+    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+
     double (*WindowFunction)(double, double, double, double){nullptr};
 
-    if(KernelFunc == 0) //Shell Top Hat
+    // WindowFunction point to correct kernel
+    if(KernelFunc == 0) 
     {
         WindowFunction = WindowFunction_Shell;
     }
-    else if(KernelFunc == 1) // Spherical Top Hat
+    else if(KernelFunc == 1) 
     {
         WindowFunction = WindowFunction_Sphere;
     }
-    else if(KernelFunc == 2) // Gaussian kernel
+    else if(KernelFunc == 2) 
     {
         WindowFunction = WindowFunction_Gaussian;
     }
 
-    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
-    
-    double* PowerPhi = PowerSpectrum(phi, 0, 1, L);
-    
-    auto w  = new double[L*L*L]();               // window function coefficients in v_j space
 
+    double* PowerPhi = PowerSpectrum(phi, 0, bandwidth, L * bandwidth);     // Fourier of autocorrelation of WaveletsPhi
+    auto WindowArray = new double[(L+1) * (L+1) * (L+1)];                   // temporary array stores kernel's convolution
+    auto w           = new double[L * L * L]();                             // window function coefficients in v_j space
+    double temp;
 
-    double* WindowArray = new double[(L+1) * (L+1) * (L+1)];
-    
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for private(temp)
+    #endif
+
     for(int i = 0; i <= L; ++i)
         for(int j = 0; j <= L; ++j)
             for(int k = 0; k <= L; ++k)
             {
-                WindowArray[i * (L+1) * (L+1) + j * (L+1) + k] = WindowFunction(rescaleR, i*DeltaXi, j*DeltaXi, k*DeltaXi);
+                temp = 0;
+                for(int ii = 0; ii < bandwidth; ++ii)
+                    for(int jj = 0; jj < bandwidth; ++jj)
+                        for(int kk = 0; kk < bandwidth; ++kk)
+                            temp += PowerPhi[ii * L + i] * PowerPhi[jj * L + j] * PowerPhi[kk * L + k]
+                                    * WindowFunction(rescaleR, (ii * L + i) * DeltaXi, (jj * L + j) * DeltaXi, (kk * L + k) * DeltaXi);
+                
+                WindowArray[i * (L+1) * (L+1) + j * (L+1) + k] = temp;
             }
-    std::cout << WindowFunction(rescaleR, L, L, L);
+
+    #ifdef IN_PARALLEL     
+    #pragma omp parallel for
+    #endif
 
     for(int i = 0; i < L; ++i)
         for(int j = 0; j < L; ++j)
             for(int k = 0; k < L; ++k)
             {
-                w[i * L * L + j * L + k] = WindowArray[i * (L+1) * (L+1) + j * (L+1) + k] * 
-                                            ( PowerPhi[i]   *  PowerPhi[j]   *  PowerPhi[k]  
-                                            + PowerPhi[L-i] *  PowerPhi[j]   *  PowerPhi[k]  
-                                            + PowerPhi[i]   *  PowerPhi[L-j] *  PowerPhi[k]  
-                                            + PowerPhi[i]   *  PowerPhi[j]   *  PowerPhi[L-k]
-                                            + PowerPhi[L-i] *  PowerPhi[L-j] *  PowerPhi[k]  
-                                            + PowerPhi[L-i] *  PowerPhi[j]   *  PowerPhi[L-k]
-                                            + PowerPhi[i]   *  PowerPhi[L-j] *  PowerPhi[L-k]
-                                            + PowerPhi[L-i] *  PowerPhi[L-j] *  PowerPhi[L-k]);
+                w[i * L * L + j * L + k] = WindowArray[i * (L+1) * (L+1) + j * (L+1) + k]
+                                           + WindowArray[(L-i) * (L+1) * (L+1) + j * (L+1) + k]
+                                           + WindowArray[i * (L+1) * (L+1) + (L-j) * (L+1) + k]
+                                           + WindowArray[i * (L+1) * (L+1) + j * (L+1) + (L-k)]
+                                           + WindowArray[(L-i) * (L+1) * (L+1) + (L-j) * (L+1) + k]
+                                           + WindowArray[(L-i) * (L+1) * (L+1) + j * (L+1) + (L-k)]
+                                           + WindowArray[i * (L+1) * (L+1) + (L-j) * (L+1) + (L-k)]
+                                           + WindowArray[(L-i) * (L+1) * (L+1) + (L-j) * (L+1) + (L-k)];
             }
     
 
@@ -363,6 +380,8 @@ double* window_function_coefficients(std::vector<double>& phi, const int J, cons
     std::cout << "Time difference 2 wfc3d    = " 
     << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()
     << "[ms]" << std::endl;
+
+    delete[] WindowArray;
 
     return w;
 }
@@ -374,7 +393,7 @@ void inner_product0(double* v0, double* v1, int N)
         v0[i] *= v1[i];
 }
 
-//s and w are 3d real array, s in physical space while w in frequency space
+//s and w are 3d Real array, s in physical space while w in frequency space
 //convol == fftback(inner_product(fft(s), w)), Matrix3D == L*L*L , L == 2^J
 //convolution result store in s
 void specialized_convolution_3d(double* s, double* w, int J)
@@ -394,7 +413,7 @@ void specialized_convolution_3d(double* s, double* w, int J)
     for(int i = 0; i < N; ++i)
         sc[i][0] = s[i];
 
-
+    
     fftw_execute(pl1);
     //FFT3D_CUBIC(sc, J, 1);
     #pragma omp parallel for
@@ -403,7 +422,7 @@ void specialized_convolution_3d(double* s, double* w, int J)
         sc[i][0] *= w[i];
         sc[i][1] *= w[i]; 
     }
-
+    
     fftw_execute(pl2);
     //FFT3D_CUBIC(sc, J, 0);
     #pragma omp parallel for
@@ -466,7 +485,7 @@ void result_interpret(const double* s, const int J, const double SimBoxL, std::v
         
     }
 
-    std::cout << "Check: " << std::endl;
+    //std::cout << "Check: " << std::endl;
 
     //double Expect, Calcul{0};
     //Expect = 4./3. * M_PI * pow((Radius * ScaleFactor), 3) / N * total;
@@ -480,67 +499,21 @@ void result_interpret(const double* s, const int J, const double SimBoxL, std::v
 }
 
 
-
-//construct two vector of index, which have not duplicate elements inside
-void de_duplicate_push_back(std::vector<Index>& index, const int i, const int j, const int k)
-{
-    if(i != 0)
-    {
-        index.push_back(Index{i, j, k});
-        index.push_back(Index{-i, j, k});
-        if(j != 0)
-        {
-            index.push_back(Index{i, -j, k});
-            index.push_back(Index{i, j, k});
-            if(k != 0)
-            {
-                index.push_back(Index{i, j, -k});
-                index.push_back(Index{-i, j, -k});
-                index.push_back(Index{i, -j, -k});
-                index.push_back(Index{-i, -j, -k});
-            }
-        }
-        else if(k != 0)
-        {
-            index.push_back(Index{i, j, -k});
-            index.push_back(Index{-i, j, k});
-        }
-    }
-    else if (j != 0)
-    {
-        index.push_back(Index{i, j, k});
-        index.push_back(Index{i, -j, k});
-        if(k != 0)
-        {
-            index.push_back(Index{i, j, -k});
-            index.push_back(Index{i, -j, -k});
-        }
-    }
-    else if (k != 0)
-    {
-        index.push_back(Index{i, j, k});
-        index.push_back(Index{i, j, -k});
-    }
-    else
-    {
-        index.push_back(Index{i, j, k});
-    }
-}
-
 //calculate index of box that must be inside the sphere R, and that might be intersect with sphere boundray
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index)
 {
-    for(int i = 0; i < R + sqrt(3.); ++i)
-        for(int j = 0; j < R + sqrt(3.); ++j)
-            for(int k =0; k < R + sqrt(3.); ++k)
+    const int M = R + 1;
+    for(int i = -M; i <= M; ++i)
+        for(int j = -M; j <= M; ++j)
+            for(int k = -M; k <= M; ++k)
             {
                 if(sqrt(i * i + j * j + k * k) <= R - sqrt(3.))
                 {
-                    de_duplicate_push_back(inner_index, i, j, k);
+                    inner_index.push_back(Index{i, j, k});
                 }
                 else if(sqrt(i * i + j * j + k * k) < R + sqrt(3.))
                 {
-                    de_duplicate_push_back(cross_index, i, j, k);
+                    cross_index.push_back(Index{i, j, k});
                 }
             }
 }
@@ -551,15 +524,20 @@ void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>
 {
     std::vector<Index> inner_index;
     std::vector<Index> cross_index;
+    std::chrono::steady_clock::time_point begin4 = std::chrono::steady_clock::now();
 
     fill_index_set(R/SimBoxL, inner_index, cross_index);
 
+    double count[p0.size()];
+    double temp;
+
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for private(temp)
+    #endif
 
     for(size_t n = 0; n < p0.size(); ++n)
     {
-        double count{0};
-        count += inner_index.size() * p.size();
-
+        temp = 0;
         for(size_t i = 0; i < p.size(); ++i)
             for(size_t m = 0; m < cross_index.size(); ++m)
             {
@@ -567,27 +545,47 @@ void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>
                 double yy = p[i].y + cross_index[m].j * SimBoxL - p0[n].y;
                 double zz = p[i].z + cross_index[m].k * SimBoxL - p0[n].z;
                 if((abs(xx) < R) && (abs(yy) < R) && (abs(zz) < R))
-                    if(sqrt(xx*xx + yy*yy + zz*zz) < R)
-                        ++count;
+                    if(xx*xx + yy*yy + zz*zz < R*R)
+                        ++temp;
             }
-        result.push_back(count);
+        count[n]= temp + inner_index.size() * p.size();
     }
+    for(int i = 0; i < p0.size(); ++i)
+        result.push_back(count[i]);
+
+    std::chrono::steady_clock::time_point end4 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 4 count    = "
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end4 - begin4).count()
+    << "[ms]" << std::endl;
 }
 
 
-long stupid_count(const double R, Particle p0, std::vector<Particle>& p)
+void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& stupid_result)
 {
-    long count {0};
-    for(size_t i = 0; i < p.size(); ++i)
+    double count[p0.size()];
+
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for 
+    #endif
+
+    for(size_t n = 0; n < p0.size(); ++n)
     {
-        double xx = p[i].x - p0.x;
-        double yy = p[i].y - p0.y;
-        double zz = p[i].z - p0.z;
-        if(sqrt(xx*xx + yy*yy + zz*zz) < R)
-            ++count;
+        count[n] = 0;
+        for(size_t i = 0; i < p.size(); ++i)
+        {
+            double xx = p[i].x - p0[n].x;
+            double yy = p[i].y - p0[n].y;
+            double zz = p[i].z - p0[n].z;
+            if(xx*xx + yy*yy + zz*zz < R*R)
+                ++count[n];
+        }
     }
-    return count;
+
+    for(size_t i = 0; i < p0.size(); ++i)
+        stupid_result.push_back(count[i]);
+        
 }
+
 
 
 
@@ -604,4 +602,15 @@ void output_result(const double* v, const int J, )
     }
     
 }
+
+    std::cout << "============direct count test============" << '\n';
+    std::cout << "rescale_R := R/SimBoxL= " << R/SimBoxL << '\n';
+    std::cout << "------------inner_index------------------" << '\n';
+    std::cout << "TotalNum= " << inner_index.size() << '\n';
+
+    for(auto x : inner_index) std::cout << x.i << " " << x.j << " " << x.k << '\n';
+
+    std::cout << "------------cross_index------------------" << '\n';
+    std::cout << "TotalNum= " << cross_index.size() << '\n';
+    for(auto x : cross_index) std::cout << x.i << " " << x.j << " " << x.k << '\n';
 */

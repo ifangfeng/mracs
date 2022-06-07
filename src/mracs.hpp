@@ -11,7 +11,7 @@
 #include"fourier.hpp"
 
 
-
+#define IN_PARALLEL
 
 #ifndef TWOPI
 #define TWOPI M_PI*2
@@ -136,5 +136,5 @@ void result_interpret(const double* s, const int J, const double SimBoxL, std::v
 void de_duplicate_push_back(std::vector<Index>& index, const int i, const int j, const int k);
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);
 void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& result);
-long stupid_count(const double R, Particle p0, std::vector<Particle>& p);
+void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& stupid_result);
 

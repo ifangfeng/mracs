@@ -10,11 +10,11 @@ KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussi
 Radius                          8 % Mpc/h
 
 %---Main_Directory
-DIREC                           /Users/feng/Public/
+DIREC                           /Users/feng/Public/mracs
 
 %---Particle_data
-MilleCata                       ./simdata/croton_etal/croton_etal.ugriz.mini.bin
+MilleCata                       ../simdata/croton_etal/croton_etal.ugriz.mini.bin
 SimBoxL                         62.5 % Mpc/h
 
 %---Number_of_threads_used
-Threads                         4
+Threads                         8

@@ -11,3 +11,7 @@ bin/
 
 #wavelets files
 wfile/
+
+#binary
+mracs
+counting
