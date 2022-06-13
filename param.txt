@@ -7,7 +7,7 @@ SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian
-Radius                          8 % Mpc/h
+Radius                          6 % Mpc/h
 
 %---Main_Directory
 DIREC                           /Users/feng/Public/mracs

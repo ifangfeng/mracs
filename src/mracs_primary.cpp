@@ -583,8 +583,18 @@ void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle
 
     for(size_t i = 0; i < p0.size(); ++i)
         stupid_result.push_back(count[i]);
-        
+
 }
+
+
+
+
+void B_Spline()
+
+
+
+
+
 
 
 

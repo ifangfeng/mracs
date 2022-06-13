@@ -15,7 +15,7 @@ std::string GENUS;
 std::string MilleCata;
 
 
-#define UNIFORM
+//#define UNIFORM
 #define GRIDSIZE 128
 #define TESTPOINTS 100
 
