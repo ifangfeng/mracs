@@ -70,12 +70,13 @@ int main()
     std::cout << "-MRA_CS Estimate = " << temp1/projNum.size() << "\n";
 
     std::cout << "List: " << "\n";
-    std::cout << "----[Centre of Sphere]---[Counting]  :  [MRA_CS]  :  [delta]" << "\n";
+    std::cout << "Num +----[Centre of Sphere]----+ [Counting]  :  [MRA_CS]    :   [delta]" << "\n";
     std::setprecision(6);
     for(int i = 0; i < TESTPOINTS; ++i)
-        std::cout << std::setw(8) << p0[i].x << std::setw(8) << p0[i].y << std::setw(8) << p0[i].z << " | "
-                  << std::setw(8) << counNum[i] << "  " << std::setw(11) << projNum[i]
-                  << std::setw(12) << projNum[i]-counNum[i] << std::endl;
+        std::cout << std::setw(3) << i << " | "
+                  << std::setw(8) << p0[i].x << std::setw(8) << p0[i].y << std::setw(8) << p0[i].z << " | "
+                  << std::setw(9) << counNum[i] << std::setw(14) << projNum[i]
+                  << std::setw(15) << projNum[i]-counNum[i] << std::endl;
 
     
     

@@ -129,13 +129,12 @@ std::vector<double> read_in_phi(const int phiGenus, const std::string DIREC)
     const int phiStart   {0};                     //Wavelet Phi0() has compact support, 
     const int phiEnd     {2*phiGenus - 1};        //start in x == 0, end in phi_end == 2n-1
     const int phiSupport {phiEnd - phiStart};     //Wavelet Phi0() has compact support 
-    //const int SampRate   {1000};                  //Wavelet Phi sampling rate (points / 1)
-
+    
     std::vector<int> step(phiSupport);
     for(int i = 0; i < phiSupport; ++i)
         step[i] = i * SampRate;
     
-    std::string iwfname {DIREC + "/wfile/DaubechiesG" + std::to_string(phiGenus) + "Phi.bin"};
+    std::string iwfname {DIREC + "/wavelets/DaubechiesG" + std::to_string(phiGenus) + "Phi.bin"};
     std::ifstream iwfs{iwfname, std::ios_base::binary};
     if(!iwfs) 
     {   
@@ -169,7 +168,6 @@ double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<doub
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
     const int phiSupport = phiEnd - phiStart;
-    //const int SampRate   = (phi.size() - 2) / phiSupport;
     const double ScaleFactor {L/SimBoxL};   //used to rescale particle coordinates
 
     std::vector<int> step(phiSupport);
@@ -231,7 +229,7 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k)
     double x0 = v[v.size()-2];
     double x1 = v[v.size()-1];
     
-    //const double TWOPI {2*M_PI};
+
     const double Delta_x {(x1-x0)/N_x};
     const double Delta_k {(k1-k0)/N_k};
 
@@ -262,7 +260,7 @@ double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k)
     double x0 = v[v.size()-2];
     double x1 = v[v.size()-1];
     
-    //const double TWOPI {2*M_PI};
+
     const double Delta_x {(x1-x0)/N_x};
     const double Delta_k {(k1-k0)/N_k};
     
@@ -589,7 +587,7 @@ void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle
 
 
 
-void B_Spline()
+
 
 
 

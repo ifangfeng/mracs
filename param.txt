@@ -1,5 +1,5 @@
 %---MRA_Resolution
-Resolution                      9
+Resolution                      7
 
 %---Daubechies_Wavelet_phi
 phiGenus                        4

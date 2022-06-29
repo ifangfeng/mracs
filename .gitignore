@@ -10,7 +10,7 @@ build/
 bin/
 
 #wavelets files
-wfile/
+wavelets/
 
 #binary
 mracs
