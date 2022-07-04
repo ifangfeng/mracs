@@ -2,6 +2,8 @@
 #include<mkl_dfti.h>
 #include<iostream>
 #include<fstream>
+#include<iomanip>
+#include<cstring>
 #include<string>
 #include<vector>
 #include<chrono>
