@@ -23,11 +23,11 @@ SRCS     := $(addprefix $(SRC_DIR)/, $(SRCS))
 OBJS     := $(addprefix $(BUILD_DIR)/, $(OBJS))
 
 #MRACS binary files
-BINS     := mracs counting
+BINS     := mracs counting 2pc
 
 .PHONY: all 
 .PRECIOUS: $(BUILD_DIR)/%.o
-all: mracs counting 
+all: mracs counting 2pc
 
 %: $(OBJS) $(BUILD_DIR)/%.o
 	$(CXX) $(OPTIMIZE) $(OMP_PATH) $(MKL_LINK) $^ -o $@

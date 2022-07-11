@@ -7,16 +7,16 @@ double WindowFunction_Sphere(double R, double ki, double kj, double kk);
 double WindowFunction_Gaussian(double R, double ki, double kj, double kk);
 
 
-//shell window function: sin(kR)/kR
+//shell window function: 2*sin(2Pi*kR)/(2Pi*kR)
 double WindowFunction_Shell(double R, double ki, double kj, double kk)
 {
     double k = sqrt(ki * ki + kj * kj + kk * kk);
-    if(k == 0) return 1.;
+    if(k == 0) return 2.;
     double Phase = TWOPI * k * R;
-    return sin(Phase)/Phase;
+    return 2*sin(Phase)/Phase;
 };
 
-//sphere window function: 4Pi*[sin(kR)-kRcos(kR)]/k^3
+//sphere window function: 4Pi*[sin(2Pi*kR)-2Pi*kRcos(2Pi*kR)]/(2Pi*k)^3
 double WindowFunction_Sphere(double R, double ki, double kj, double kk)
 {
     double k = sqrt(ki * ki + kj * kj + kk * kk);

@@ -1,4 +1,7 @@
-#include"mracs.hpp"
+#include"mracs_primary.hpp"
+
+
+std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string MilleCata);
 
 
 

@@ -1,4 +1,5 @@
-#include"mracs.hpp"
+#include"mracs_primary.hpp"
+#include"kernel.hpp"
 
 
 #define LOWER_RESOLUTION 8
