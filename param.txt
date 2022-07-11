@@ -1,5 +1,5 @@
 %---MRA_Resolution
-Resolution                      8
+Resolution                      10
 
 %---Daubechies_Wavelet_phi
 phiGenus                        4
@@ -17,4 +17,4 @@ MilleCata                       /data0/Millennium/croton_etal/croton_etal.ugriz.
 SimBoxL                         62.5 % Mpc/h
 
 %---Number_of_threads_used
-Threads                         1
+Threads                         128

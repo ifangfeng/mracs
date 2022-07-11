@@ -1,7 +1,7 @@
 # MRA-CS
-in ./src type:
+compile:
 	make counting
-after succeed, type:
+run:
 	./counting
 
 all the parameters is run-time specify in param.txt, do not require recompilation
