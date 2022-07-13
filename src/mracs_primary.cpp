@@ -400,10 +400,18 @@ void specialized_convolution_3d(double* s, double* w, int J)
     const int L {1<<J};
     const int N {L*L*L};
 
-    std::chrono::steady_clock::time_point begin3 = std::chrono::steady_clock::now();
-
+    //
+    DFTI
     //auto sc = new double[N*2];
     auto sc = fftw_alloc_complex(N);
+
+    if(!fftw_init_threads())
+    {
+        std::cout << "fftw_init_threads() with error, Abort" << std::endl;
+        std::terminate();
+    }
+
+    fftwf_plan_with_nthreads(omp_get_max_threads());
 
     fftw_plan pl1 = fftw_plan_dft_3d(L, L, L, sc, sc, FFTW_FORWARD, FFTW_MEASURE);
     fftw_plan pl2 = fftw_plan_dft_3d(L, L, L, sc, sc, FFTW_BACKWARD, FFTW_MEASURE);
@@ -412,9 +420,14 @@ void specialized_convolution_3d(double* s, double* w, int J)
     for(int i = 0; i < N; ++i)
         sc[i][0] = s[i];
 
-    
+    std::chrono::steady_clock::time_point begin3 = std::chrono::steady_clock::now();
     fftw_execute(pl1);
     //FFT3D_CUBIC(sc, J, 1);
+    std::chrono::steady_clock::time_point end3 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 3 convl3d  = "
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end3 - begin3).count()
+    << "[ms]" << std::endl;
+    
     #pragma omp parallel for
     for(int i = 0; i < N; ++i)
     {
@@ -422,16 +435,14 @@ void specialized_convolution_3d(double* s, double* w, int J)
         sc[i][1] *= w[i]; 
     }
     
+    
     fftw_execute(pl2);
     //FFT3D_CUBIC(sc, J, 0);
     #pragma omp parallel for
     for(int i = 0; i < N; ++i)
         s[i] = sc[i][0]/N;
 
-    std::chrono::steady_clock::time_point end3 = std::chrono::steady_clock::now();
-    std::cout << "Time difference 3 convl3d  = "
-    << std::chrono::duration_cast<std::chrono::milliseconds>(end3 - begin3).count()
-    << "[ms]" << std::endl;
+    //
 
     fftw_free(sc);
 }
