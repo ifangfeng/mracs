@@ -6,6 +6,7 @@ std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string Mill
 
 //global variables for MRACS interface
 int Resolution;                    // MRA scale parameter J
+int BaseType;                      // 0 for B_Spline, 1 for Daubechies phi
 int phiGenus;                      // Daubechies Wavelet Genus n
 int SampRate;                      // Wavelet Phi sampling rate (points / 1)
 int KernelFunc;                    // window function, 0:shell, 1:sphere, 2:Gaussian

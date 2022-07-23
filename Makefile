@@ -4,8 +4,8 @@
 CXX       = clang++
 OPTIMIZE  = -fopenmp -std=c++11 -O3 
 #compiler&flags for Linux
-CXX       = g++
-OPTIMIZE  = -fopenmp -DMKL_lLP64 -m64 -std=c++11 -O3
+#CXX       = g++
+#OPTIMIZE  = -fopenmp -DMKL_lLP64 -m64 -std=c++11 -O3
 
 OMP_PATH  = -L/usr/local/opt/libomp/lib
 #LLVM_INCL = -I/usr/local/opt/llvm/include

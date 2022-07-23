@@ -8,7 +8,7 @@
 int main()
 {
     read_parameter();
-    auto phi = read_in_phi(phiGenus, DIREC);
+    auto phi = read_in_phi(phiGenus);
     
     double scalefactor = SimBoxL/GRIDSIZE;
     std::vector<Particle> p;
@@ -25,8 +25,8 @@ int main()
     for(auto i : g) p.push_back(Particle{i.x, i.y, i.z, 1.});
     #endif
 
-    auto s   = scaling_function_coefficients(p, phi, Resolution, SimBoxL);
-    auto w   = window_function_coefficients(phi, Resolution, SimBoxL, Radius);
+    auto s   = scaling_function_coefficients(p, phi, Resolution);
+    auto w   = window_function_coefficients(phi, Resolution, Radius);
     specialized_convolution_3d(s, w, Resolution);
 
     std::default_random_engine e;

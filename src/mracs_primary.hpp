@@ -2,6 +2,8 @@
 #include<mkl_dfti.h>
 #include<iostream>
 #include<fstream>
+#include<iomanip>
+#include<cstring>
 #include<string>
 #include<vector>
 #include<chrono>
@@ -19,10 +21,11 @@
 #endif
 
 #ifndef PARAMETERS_NUM
-#define PARAMETERS_NUM 9
+#define PARAMETERS_NUM 10
 #endif
 
 extern  int Resolution;                    // MRA scale parameter J
+extern  int BaseType;                      // 0 for B_Spline, 1 for Daubechies phi
 extern  int phiGenus;                      // Daubechies Wavelet Genus n
 extern  int SampRate;                      // Wavelet Phi sampling rate (points / 1)
 extern  int KernelFunc;                    // window function, 0:shell, 1:sphere, 2:Gaussian
@@ -114,12 +117,12 @@ struct Particle
 // defined in mracs.cpp
 void welcome();
 void read_parameter();
-std::vector<double> read_in_phi(const int phiGenus, const std::string DIREC);
-double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<double>& phi, const int J , const double SimBoxL);
+std::vector<double> read_in_phi(const int phiGenus);
+double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<double>& phi, const int J);
 double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k);
 double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k);
-double* window_function_coefficients(std::vector<double>& phi, const int J, const double SimBoxL, const double Radius);
+double* window_function_coefficients(std::vector<double>& phi, const int J, const double Radius);
 void inner_product0(double* v0, double* v1, int N);
 void specialized_convolution_3d(double* s, double* w, int J);
 void result_interpret(const double* s, const int J, const double SimBoxL, std::vector<double>& phi, std::vector<Particle>& p0, std::vector<double>& result, const double total);

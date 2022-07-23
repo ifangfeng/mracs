@@ -1,13 +1,16 @@
 %---MRA_Resolution
 Resolution                      9
 
-%---Daubechies_Wavelet_phi
-phiGenus                        4
+%---Base_Function_Type
+BaseType                        1 % _0_:_BSpline_1_:_Daubechies
+
+%---Wavelet_phi_Genus
+phiGenus                        10
 SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian
-Radius                          6 % Mpc/h
+Radius                          5.98 % Mpc/h
 
 %---Main_Directory
 DIREC                           /Users/feng/Public/mracs

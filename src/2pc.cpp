@@ -11,5 +11,5 @@ int main()
     auto phi = read_in_phi(phiGenus,DIREC);
     auto s = scaling_function_coefficients(p, phi, Resolution, SimBoxL);
     auto w = window_function_coefficients(phi,Resolution,SimBoxL,Radius);
-    specialized_convolution_3d();
+    specialized_convolution_3d(s,w,Resolution);
 }

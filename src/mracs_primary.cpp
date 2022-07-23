@@ -34,6 +34,12 @@ void read_parameter()
             Resolution = atoi(temp.c_str());
             npri++;
         }
+        else if(itemp=="BaseType")
+        {
+            iprmfs >> temp;
+            BaseType = atoi(temp.c_str());
+            npri++;
+        }
         else if(itemp=="phiGenus")
         {
             iprmfs >> temp;
@@ -83,10 +89,11 @@ void read_parameter()
             npri++;
         }
     }
-    
+    std::string BaseType_String = !BaseType ? "B_Spline" : "Daubechies";
     
     std::cout << "Reading param.txt " << std::endl;
     std::cout << "-> Resolution  =  " << Resolution << std::endl;
+    std::cout << "-> BaseType    =  " << BaseType_String << std::endl;
     std::cout << "-> phiGenus    =  " << phiGenus << std::endl;
     std::cout << "-> SampRate    =  " << SampRate << std::endl;
     std::cout << "-> KernelFunc  =  " << KernelFunc << std::endl;
@@ -120,12 +127,56 @@ void read_parameter()
 
 
 //=======================================================================================
-//|||||||||||||||||||||||||||||| read in wavelets phi data ||||||||||||||||||||||||||||||
+//|||||||||||||||||||||||||||||| B-Spline phi data ||||||||||||||||||||||||||||||
 //=======================================================================================
-//---- numerical value of Daubechies scaling function of genus X, locate in closed
-//---- interval [0, 2X-1] with sampling rate 10000 points per unit length (points / 1)
+//---- numerical value of B-Spline scaling function of genus n, locate in closed interval
+//---- [-(n+1)/2, (n+1)/2] with sampling rate 1000 points per unit length (points / 1)
 //---------------------------------------------------------------------------------------
-std::vector<double> read_in_phi(const int phiGenus, const std::string DIREC)
+std::vector<double> B_Spline(const int n, const int sampleRate)
+{
+    double* spline = new double[(n+1)*sampleRate+1];
+    const double delta_x = 1./sampleRate;
+
+    for(int i = 1; i < sampleRate; ++i)
+    {
+        spline[i] = 1.;
+    }
+    spline[0] = 0.5;
+    spline[sampleRate] = 0.5;
+
+    for(int m = 1; m <= n; ++m)
+    {
+        for(size_t i = 0; i <= m * sampleRate; ++i)
+        {
+            spline[i] *= i * delta_x / m;
+        }
+        for(size_t i = sampleRate; i <= (m+1) * sampleRate / 2; ++i)
+        {
+            spline[i] += spline[(m+1) * sampleRate - i];
+        }
+        for(size_t i = 0; i <= (m+1) * sampleRate / 2; ++i)
+        {
+            spline[(m+1) * sampleRate - i] = spline[i];
+        }
+    }
+    std::vector<double> phi;
+    for(size_t i = 0; i <= (n+1) * sampleRate; ++i)
+    {
+        phi.push_back(spline[i]);
+    }
+    delete[] spline;
+
+    return phi;
+}
+
+
+//=======================================================================================
+//||||||||||||||||||||||||||||| Daubechies phi data |||||||||||||||||||||||||||||
+//=======================================================================================
+//---- numerical value of Daubechies scaling function of genus n, locate in closed
+//---- interval [0, 2n-1] with sampling rate 1000 points per unit length (points / 1)
+//---------------------------------------------------------------------------------------
+std::vector<double> Daubechies_Phi(const int phiGenus)
 {
     const int phiStart   {0};                     //Wavelet Phi0() has compact support, 
     const int phiEnd     {2*phiGenus - 1};        //start in x == 0, end in phi_end == 2n-1
@@ -153,18 +204,41 @@ std::vector<double> read_in_phi(const int phiGenus, const std::string DIREC)
     phi.push_back(phiStart);
     phi.push_back(phiEnd);
 
-    std::cout << "---Daubechies phi genus: " << phiGenus << std::endl;
-    std::cout << "---Wavelet phi supports: [0," << phiSupport << ") \n";
-    std::cout << "---Sampling points: " << phi.size() - 2 << std::endl;
+    //std::cout << "---Daubechies phi genus: " << phiGenus << std::endl;
+    //std::cout << "---Wavelet phi supports: [0," << phiSupport << ") \n";
+    //std::cout << "---Sampling points: " << phi.size() - 2 << std::endl;
 
     return phi;
 }
 
 //=======================================================================================
+//||||||||||||||||||||||| read in B-Spline or Daubechies phi data |||||||||||||||||||||||
+//=======================================================================================
+//---- numerical value of n_th B-Spline or Daubechies scaling function data 
+//---------------------------------------------------------------------------------------
+std::vector<double> read_in_phi(const int phiGenus)
+{
+    std::vector<double> phi;
+    if(BaseType == 0)
+    {
+        phi = B_Spline(phiGenus, SampRate);
+        phi.push_back(0);
+        phi.push_back(phiGenus + 1);
+    }
+    else if (BaseType == 1)
+    {
+        phi = Daubechies_Phi(phiGenus);
+    }
+    return phi;
+}
+
+
+
+//=======================================================================================
 //||||||||||||||| sfc3d (scaling function coefficients of density field) ||||||||||||||||
 //=======================================================================================
-double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<double>& phi, const int J , const double SimBoxL)
-{
+double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<double>& phi, const int J)
+{   
     const int L          = 1 << J;
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
@@ -182,7 +256,7 @@ double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<doub
 
     std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
 
-    double s_temp[phiSupport * phiSupport * phiSupport];        // openmp seems not allow Array Reductions allocated on heap
+    double s_temp[phiSupport * phiSupport * phiSupport];
 
     #ifdef IN_PARALLEL
     #pragma omp parallel for reduction (+:s_temp)
@@ -206,12 +280,14 @@ double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<doub
             for(int j = 0; j < phiSupport; ++j)
                 for(int k = 0; k < phiSupport; ++k)
                 {
-                    s_temp[i*phiSupport*phiSupport + j*phiSupport + k] += phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
+                    s_temp[i*phiSupport*phiSupport + j*phiSupport + k] += 
+                    phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
                 }
         for(int i = 0; i < phiSupport; ++i)
             for(int j = 0; j < phiSupport; ++j)
                 for(int k = 0; k < phiSupport; ++k)
-                    s[((xxc - i) & (L - 1)) * L * L+ ((yyc - j) & (L - 1)) * L + ((zzc - k) & (L - 1))] += s_temp[i*phiSupport*phiSupport + j*phiSupport + k];        
+                    s[((xxc - i)&(L - 1))*L*L + ((yyc - j)&(L - 1))*L + ((zzc - k)&(L - 1))] +=
+                    s_temp[i*phiSupport*phiSupport + j*phiSupport + k];        
     }
 
     std::chrono::steady_clock::time_point end1 = std::chrono::steady_clock::now();
@@ -222,8 +298,10 @@ double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<doub
     return s;
 }
 
-//read in Real Value Vector v, return an array s, which store the continuous fourier
-//transform of v, located in frequency space [k0, k1] with N_k + 1 sampling points
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// read in Real-Value vector v, return an array s, which store the continuous fourier
+// transform of v, located in frequency space [k0, k1] with N_k + 1 sampling points
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k)
 {
     int N_x= v.size()-2;
@@ -254,7 +332,9 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k)
     return s;
 }
 
-//faster but slightly less accuate than Spectrum1()
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// faster but slightly less accuate than Spectrum1()
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k)
 {
     int N_x = v.size()-2;
@@ -292,8 +372,10 @@ double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k)
     return s;
 }
 
-//read in Real Value Vector v, calculate its power spectrum located in 
-//frequency space [k0, k1] with N_k + 1 sampling points, return as array p[]
+//=======================================================================================
+// read in Real Value Vector v, calculate its power spectrum located in 
+// frequency space [k0, k1] with N_k + 1 sampling points, return as array p[]
+//=======================================================================================
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k)
 {
     double* s = Spectrum(v, k0, k1, N_k);
@@ -305,9 +387,52 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k)
 }
 
 //=======================================================================================
+// calculate m_th B_Spline dual's power spectrum located in frequency
+// space [k0, k1] with N_k + 1 sampling points, return as array p[]
+//=======================================================================================
+double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, int N_k)
+{
+    double* p = new double[N_k + 1];
+    double* a = new double[N_k + 1];
+    
+    std::vector<double> c = B_Spline(2*m+1, 1);
+    for(int i = 0; i <= N_k; ++i)
+    {
+        a[i] = c[m+1];
+    }
+    const double Delta_k {(k1-k0)/N_k};
+    double k = k0;
+    for(int n = 1; n <= m; ++n)
+    {
+        for(int i = 0; i <= N_k; ++i)
+        {
+            a[i] += 2*c[m+n+1] * cos(TWOPI*n*k);
+            k += Delta_k;
+        }
+        k = k0;
+    }
+    k = k0;
+    for(int i = 0; i <= N_k; ++i)
+    {
+        if(k == 0)
+        {
+            p[i] = pow(a[i], -2);
+        }
+        else
+        {
+            p[i] = pow(sin(k*M_PI)/(k*M_PI), 2*(m+1))/pow(a[i], 2);
+        }
+        k += Delta_k;
+    }
+    
+    delete[] a;
+    return p;
+}
+
+//=======================================================================================
 //||||||||||||||| wfc3d (scaling function coefficients of window function) ||||||||||||||
 //=======================================================================================
-double* window_function_coefficients(std::vector<double>& phi, const int J, const double SimBoxL, const double Radius)
+double* window_function_coefficients(std::vector<double>& phi, const int J, const double Radius)
 {
     const int L {1<<J};
     const int bandwidth = 1;
@@ -332,8 +457,16 @@ double* window_function_coefficients(std::vector<double>& phi, const int J, cons
         WindowFunction = WindowFunction_Gaussian;
     }
 
-
-    double* PowerPhi = PowerSpectrum(phi, 0, bandwidth, L * bandwidth);     // Fourier of autocorrelation of WaveletsPhi
+    double* PowerPhi = nullptr;
+    if(BaseType == 0)
+    {
+        PowerPhi = B_Spline_Dual_Power_Spectrum(phiGenus, 0, bandwidth, L * bandwidth);
+    }
+    else if (BaseType == 1)
+    {
+        PowerPhi = PowerSpectrum(phi, 0, bandwidth, L * bandwidth);
+    }
+    
     auto WindowArray = new double[(L+1) * (L+1) * (L+1)];                   // temporary array stores kernel's convolution
     auto w           = new double[L * L * L]();                             // window function coefficients in v_j space
     double temp;
@@ -392,16 +525,17 @@ void inner_product0(double* v0, double* v1, int N)
         v0[i] *= v1[i];
 }
 
-//s and w are 3d Real array, s in physical space while w in frequency space
-//convol == fftback(inner_product(fft(s), w)), Matrix3D == L*L*L , L == 2^J
-//convolution result store in s
+//=======================================================================================
+// s and w are 3d Real array, s in physical space while w in frequency space, convolution
+// result store in s, convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J
+//=======================================================================================
 void specialized_convolution_3d(double* s, double* w, int J)
 {
     const int L {1<<J};
     const int N {L*L*L};
 
     //
-    DFTI
+    
     //auto sc = new double[N*2];
     auto sc = fftw_alloc_complex(N);
 
