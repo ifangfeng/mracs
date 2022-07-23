@@ -8,8 +8,8 @@ int main()
     for(Galaxy i : g)
         p.push_back({i.x, i.y, i.z, 1.});
 
-    auto phi = read_in_phi(phiGenus,DIREC);
-    auto s = scaling_function_coefficients(p, phi, Resolution, SimBoxL);
-    auto w = window_function_coefficients(phi,Resolution,SimBoxL,Radius);
+    auto phi = read_in_phi(phiGenus);
+    auto s = scaling_function_coefficients(p, phi, Resolution);
+    auto w = window_function_coefficients(phi,Resolution,Radius);
     specialized_convolution_3d(s,w,Resolution);
 }

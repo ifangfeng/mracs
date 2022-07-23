@@ -237,8 +237,9 @@ std::vector<double> read_in_phi(const int phiGenus)
 //=======================================================================================
 //||||||||||||||| sfc3d (scaling function coefficients of density field) ||||||||||||||||
 //=======================================================================================
-double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<double>& phi, const int J)
+double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Particle>& p)
 {   
+    const int J          = Resolution;
     const int L          = 1 << J;
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
@@ -432,8 +433,9 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, int N_k)
 //=======================================================================================
 //||||||||||||||| wfc3d (scaling function coefficients of window function) ||||||||||||||
 //=======================================================================================
-double* window_function_coefficients(std::vector<double>& phi, const int J, const double Radius)
+double* window_function_coefficients(std::vector<double>& phi, const double Radius)
 {
+    const int J {Resolution};
     const int L {1<<J};
     const int bandwidth = 1;
     const double DeltaXi = 1./(L);
@@ -529,8 +531,9 @@ void inner_product0(double* v0, double* v1, int N)
 // s and w are 3d Real array, s in physical space while w in frequency space, convolution
 // result store in s, convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J
 //=======================================================================================
-void specialized_convolution_3d(double* s, double* w, int J)
+void specialized_convolution_3d(double* s, double* w)
 {
+    const int J {Resolution};
     const int L {1<<J};
     const int N {L*L*L};
 
@@ -584,9 +587,9 @@ void specialized_convolution_3d(double* s, double* w, int J)
 //=======================================================================================
 //|||||||||||||||||||||||||||||||||||| Result interpret |||||||||||||||||||||||||||||||||
 //=======================================================================================
-void result_interpret(const double* s, const int J, const double SimBoxL, std::vector<double>& phi,
-                     std::vector<Particle>& p0, std::vector<double>& result, const double total)
+void result_interpret(const double* s, std::vector<double>& phi, std::vector<Particle>& p0, std::vector<double>& result)
 {
+    const int J          = Resolution;
     const int L          = 1 << J;
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];

@@ -118,14 +118,14 @@ struct Particle
 void welcome();
 void read_parameter();
 std::vector<double> read_in_phi(const int phiGenus);
-double* scaling_function_coefficients(std::vector<Particle>& p, std::vector<double>& phi, const int J);
+double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Particle>& p);
 double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k);
 double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k);
-double* window_function_coefficients(std::vector<double>& phi, const int J, const double Radius);
+double* window_function_coefficients(std::vector<double>& phi, const double Radius);
 void inner_product0(double* v0, double* v1, int N);
-void specialized_convolution_3d(double* s, double* w, int J);
-void result_interpret(const double* s, const int J, const double SimBoxL, std::vector<double>& phi, std::vector<Particle>& p0, std::vector<double>& result, const double total);
+void specialized_convolution_3d(double* s, double* w);
+void result_interpret(const double* s, std::vector<double>& phi, std::vector<Particle>& p0, std::vector<double>& result);
 void de_duplicate_push_back(std::vector<Index>& index, const int i, const int j, const int k);
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);
 void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& result);

@@ -25,9 +25,9 @@ int main()
     for(auto i : g) p.push_back(Particle{i.x, i.y, i.z, 1.});
     #endif
 
-    auto s   = scaling_function_coefficients(p, phi, Resolution);
-    auto w   = window_function_coefficients(phi, Resolution, Radius);
-    specialized_convolution_3d(s, w, Resolution);
+    auto s   = scaling_function_coefficients(phi, p);
+    auto w   = window_function_coefficients(phi, Radius);
+    specialized_convolution_3d(s, w);
 
     std::default_random_engine e;
     std::uniform_real_distribution<double> u(0, SimBoxL);
@@ -42,7 +42,7 @@ int main()
     std::vector<double> projNum;
     std::vector<double> counNum;
 
-    result_interpret(s, Resolution, SimBoxL, phi, p0, projNum, p.size());
+    result_interpret(s, phi, p0, projNum);
     count_in_sphere(Radius, SimBoxL, p, p0, counNum);
 
     double temp0{0}, temp1{0};
