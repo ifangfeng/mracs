@@ -24,15 +24,17 @@
 #define PARAMETERS_NUM 10
 #endif
 
-extern  int Resolution;                    // MRA scale parameter J
-extern  int BaseType;                      // 0 for B_Spline, 1 for Daubechies phi
-extern  int phiGenus;                      // Daubechies Wavelet Genus n
-extern  int SampRate;                      // Wavelet Phi sampling rate (points / 1)
-extern  int KernelFunc;                    // window function, 0:shell, 1:sphere, 2:Gaussian
-extern  double Radius;                     // window radius R in Mpc/h
-extern  double SimBoxL;                    // simulation box length in Mpc/h
-extern  int Threads;                       // number of threads that used
+extern int Resolution;                    // MRA scale parameter J
+extern int BaseType;                      // 0 for B_Spline, 1 for Daubechies phi
+extern int phiGenus;                      // Daubechies Wavelet Genus n
+extern int SampRate;                      // Wavelet Phi sampling rate (points / 1)
+extern int KernelFunc;                    // window function, 0:shell, 1:sphere, 2:Gaussian
+extern double Radius;                     // window radius R in Mpc/h
+extern double SimBoxL;                    // simulation box length in Mpc/h
+extern int Threads;                       // number of threads that used
 
+extern int GridLen;                       // side length of MRA frame, == 2^J
+extern int64_t GridNum;                   // number of cubes, == (2^J)^3
 extern std::string DIREC;
 extern std::string RESOL;
 extern std::string RADII;
@@ -123,8 +125,11 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k);
 double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k);
 double* window_function_coefficients(std::vector<double>& phi, const double Radius);
-void inner_product0(double* v0, double* v1, int N);
-void specialized_convolution_3d(double* s, double* w);
+double* specialized_convolution_3d(double* s, double* w);
+double* inner_product_c2r(fftw_complex* sc, double* w);
+fftw_complex* sfc_r2c(double* s);
+double array_sum(double* w, int N);
+double inner_product(double* v0, double* v1, int64_t N);
 void result_interpret(const double* s, std::vector<double>& phi, std::vector<Particle>& p0, std::vector<double>& result);
 void de_duplicate_push_back(std::vector<Index>& index, const int i, const int j, const int k);
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);

@@ -115,12 +115,13 @@ void read_parameter()
         std::terminate();
     }
 
-    const int L {1<<Resolution};
+    GridLen = 1 << Resolution;
+    GridNum = 1 << Resolution*3;
 
-    RESOL = "L" + std::to_string(L);
+    RESOL = "L" + std::to_string(GridLen);
     RADII = "R" + std::to_string(Radius);
     GENUS = "DaubG" + std::to_string(phiGenus);
-    std::cout << "---Grid 3d N = "<< L << "^3"<< std::endl;
+    std::cout << "---Grid 3d N = "<< GridLen << "^3"<< std::endl;
 
 }
 
@@ -239,12 +240,17 @@ std::vector<double> read_in_phi(const int phiGenus)
 //=======================================================================================
 double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Particle>& p)
 {   
-    const int J          = Resolution;
-    const int L          = 1 << J;
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
     const int phiSupport = phiEnd - phiStart;
-    const double ScaleFactor {L/SimBoxL};   //used to rescale particle coordinates
+    const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
+    
+    double total {0};
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for reduction (+:total)
+    #endif
+    for(auto x : p) total += x.weight;
+    total /= p.size();
 
     std::vector<int> step(phiSupport);
     for(int i = 0; i < phiSupport; ++i)
@@ -252,7 +258,7 @@ double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Part
         step[i] = i * SampRate;
     }
 
-    auto s = new double[L*L*L]();         // density field coefficients in v_j space
+    auto s = new double[GridNum]();         // density field coefficients in v_j space
     
 
     std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
@@ -282,12 +288,12 @@ double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Part
                 for(int k = 0; k < phiSupport; ++k)
                 {
                     s_temp[i*phiSupport*phiSupport + j*phiSupport + k] += 
-                    phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
+                    phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]] * p[n].weight / total;
                 }
         for(int i = 0; i < phiSupport; ++i)
             for(int j = 0; j < phiSupport; ++j)
                 for(int k = 0; k < phiSupport; ++k)
-                    s[((xxc - i)&(L - 1))*L*L + ((yyc - j)&(L - 1))*L + ((zzc - k)&(L - 1))] +=
+                    s[((xxc - i)&(GridLen - 1))*GridLen*GridLen + ((yyc - j)&(GridLen - 1))*GridLen + ((zzc - k)&(GridLen - 1))] +=
                     s_temp[i*phiSupport*phiSupport + j*phiSupport + k];        
     }
 
@@ -435,11 +441,9 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, int N_k)
 //=======================================================================================
 double* window_function_coefficients(std::vector<double>& phi, const double Radius)
 {
-    const int J {Resolution};
-    const int L {1<<J};
     const int bandwidth = 1;
-    const double DeltaXi = 1./(L);
-    const double rescaleR {Radius * L / SimBoxL};
+    const double DeltaXi = 1./GridLen;
+    const double rescaleR {Radius * GridLen/SimBoxL};
 
     std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
 
@@ -462,53 +466,54 @@ double* window_function_coefficients(std::vector<double>& phi, const double Radi
     double* PowerPhi = nullptr;
     if(BaseType == 0)
     {
-        PowerPhi = B_Spline_Dual_Power_Spectrum(phiGenus, 0, bandwidth, L * bandwidth);
+        PowerPhi = B_Spline_Dual_Power_Spectrum(phiGenus, 0, bandwidth, GridLen * bandwidth);
     }
     else if (BaseType == 1)
     {
-        PowerPhi = PowerSpectrum(phi, 0, bandwidth, L * bandwidth);
+        PowerPhi = PowerSpectrum(phi, 0, bandwidth, GridLen * bandwidth);
     }
     
-    auto WindowArray = new double[(L+1) * (L+1) * (L+1)];                   // temporary array stores kernel's convolution
-    auto w           = new double[L * L * L]();                             // window function coefficients in v_j space
+    auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
+    // w is even & real
+    auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
     double temp;
 
     #ifdef IN_PARALLEL
     #pragma omp parallel for private(temp)
     #endif
 
-    for(int i = 0; i <= L; ++i)
-        for(int j = 0; j <= L; ++j)
-            for(int k = 0; k <= L; ++k)
+    for(int i = 0; i <= GridLen; ++i)
+        for(int j = 0; j <= GridLen; ++j)
+            for(int k = 0; k <= GridLen; ++k)
             {
                 temp = 0;
                 for(int ii = 0; ii < bandwidth; ++ii)
                     for(int jj = 0; jj < bandwidth; ++jj)
                         for(int kk = 0; kk < bandwidth; ++kk)
-                            temp += PowerPhi[ii * L + i] * PowerPhi[jj * L + j] * PowerPhi[kk * L + k]
-                                    * WindowFunction(rescaleR, (ii * L + i) * DeltaXi, (jj * L + j) * DeltaXi, (kk * L + k) * DeltaXi);
+                            temp += PowerPhi[ii * GridLen + i] * PowerPhi[jj * GridLen + j] * PowerPhi[kk * GridLen + k] * WindowFunction
+                                    (rescaleR, (ii * GridLen + i) * DeltaXi, (jj * GridLen + j) * DeltaXi, (kk * GridLen + k) * DeltaXi);
                 
-                WindowArray[i * (L+1) * (L+1) + j * (L+1) + k] = temp;
+                WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = temp;
             }
 
     #ifdef IN_PARALLEL     
     #pragma omp parallel for
     #endif
-
-    for(int i = 0; i < L; ++i)
-        for(int j = 0; j < L; ++j)
-            for(int k = 0; k < L; ++k)
-            {
-                w[i * L * L + j * L + k] = WindowArray[i * (L+1) * (L+1) + j * (L+1) + k]
-                                           + WindowArray[(L-i) * (L+1) * (L+1) + j * (L+1) + k]
-                                           + WindowArray[i * (L+1) * (L+1) + (L-j) * (L+1) + k]
-                                           + WindowArray[i * (L+1) * (L+1) + j * (L+1) + (L-k)]
-                                           + WindowArray[(L-i) * (L+1) * (L+1) + (L-j) * (L+1) + k]
-                                           + WindowArray[(L-i) * (L+1) * (L+1) + j * (L+1) + (L-k)]
-                                           + WindowArray[i * (L+1) * (L+1) + (L-j) * (L+1) + (L-k)]
-                                           + WindowArray[(L-i) * (L+1) * (L+1) + (L-j) * (L+1) + (L-k)];
-            }
     
+    for(int i = 0; i < GridLen; ++i)
+        for(int j = 0; j < GridLen; ++j)
+            for(int k = 0; k < GridLen/2+1; ++k)
+            {
+                w[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k]
+                = WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)];
+            }
 
     std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
     std::cout << "Time difference 2 wfc3d    = " 
@@ -520,68 +525,92 @@ double* window_function_coefficients(std::vector<double>& phi, const double Radi
     return w;
 }
 
-//calculate two array's inner product and store result in the first one
-void inner_product0(double* v0, double* v1, int N)
+// calculate two array's inner product return as double
+double inner_product(double* v0, double* v1, int64_t N)
 {
-    for(int i = 0; i < N; ++i)
-        v0[i] *= v1[i];
+    double sum {0};
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for reduction (+:sum)
+    #endif
+    
+    for(int64_t i = 0; i < N; ++i)
+    {
+        sum += v0[i] * v1[i];
+    }
+    return sum;
 }
 
-//=======================================================================================
-// s and w are 3d Real array, s in physical space while w in frequency space, convolution
-// result store in s, convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J
-//=======================================================================================
-void specialized_convolution_3d(double* s, double* w)
+// retrun sum of all elements of array w, w has length N
+double array_sum(double* w, int N)
 {
-    const int J {Resolution};
-    const int L {1<<J};
-    const int N {L*L*L};
+    double sum {0};
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for reduction (+:sum)
+    #endif
+    for(size_t i = 0; i < N; ++i)
+    {
+        sum += w[i];
+    }
+    return sum;
+}
 
-    //
-    
-    //auto sc = new double[N*2];
-    auto sc = fftw_alloc_complex(N);
-
+fftw_complex* sfc_r2c(double* s)
+{
     if(!fftw_init_threads())
     {
         std::cout << "fftw_init_threads() with error, Abort" << std::endl;
         std::terminate();
     }
 
+    auto sc = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+
     fftwf_plan_with_nthreads(omp_get_max_threads());
 
-    fftw_plan pl1 = fftw_plan_dft_3d(L, L, L, sc, sc, FFTW_FORWARD, FFTW_MEASURE);
-    fftw_plan pl2 = fftw_plan_dft_3d(L, L, L, sc, sc, FFTW_BACKWARD, FFTW_MEASURE);
+    fftw_plan pl = fftw_plan_dft_r2c_3d(GridLen, GridLen, GridLen, s, sc, FFTW_MEASURE);
+    fftw_execute(pl);
+
+    return sc;
+}
+
+double* inner_product_c2r(fftw_complex* sc, double* w)
+{
+    auto c = new double[GridNum];
+
+    fftw_plan_with_nthreads(omp_get_max_threads());
+    fftw_plan pl = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc, c, FFTW_MEASURE);
 
     #pragma omp parallel for
-    for(int i = 0; i < N; ++i)
-        sc[i][0] = s[i];
-
-    std::chrono::steady_clock::time_point begin3 = std::chrono::steady_clock::now();
-    fftw_execute(pl1);
-    //FFT3D_CUBIC(sc, J, 1);
-    std::chrono::steady_clock::time_point end3 = std::chrono::steady_clock::now();
-    std::cout << "Time difference 3 convl3d  = "
-    << std::chrono::duration_cast<std::chrono::milliseconds>(end3 - begin3).count()
-    << "[ms]" << std::endl;
-    
-    #pragma omp parallel for
-    for(int i = 0; i < N; ++i)
+    for(int i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
     {
         sc[i][0] *= w[i];
         sc[i][1] *= w[i]; 
     }
-    
-    
-    fftw_execute(pl2);
-    //FFT3D_CUBIC(sc, J, 0);
+    fftw_execute(pl);
     #pragma omp parallel for
-    for(int i = 0; i < N; ++i)
-        s[i] = sc[i][0]/N;
+    for(int i = 0; i < GridNum; ++i) c[i] /= GridNum;
 
-    //
+    delete[] w;
+    return c;
+}
+
+//=======================================================================================
+// s and w are 3d Real array, s in physical space while w in frequency space, return 
+// as double* c , convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J
+//=======================================================================================
+double* specialized_convolution_3d(double* s, double* w)
+{
+    auto begin3 = std::chrono::steady_clock::now();
+
+    auto sc = sfc_r2c(s);
+    auto c = inner_product_c2r(sc, w);
+    auto end3 = std::chrono::steady_clock::now();
+
+    std::cout << "Time difference 3 convl3d  = "
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end3 - begin3).count()
+    << "[ms]" << std::endl;
 
     fftw_free(sc);
+    return c;
 }
 
 //=======================================================================================
@@ -589,20 +618,18 @@ void specialized_convolution_3d(double* s, double* w)
 //=======================================================================================
 void result_interpret(const double* s, std::vector<double>& phi, std::vector<Particle>& p0, std::vector<double>& result)
 {
-    const int J          = Resolution;
-    const int L          = 1 << J;
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
     const int phiSupport = phiEnd - phiStart;
     const int SampRate   = (phi.size() - 2) / phiSupport;
-    const double ScaleFactor {L/SimBoxL};   //used to rescale particle coordinates
+    const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
 
 
     std::vector<int> step(phiSupport);
     for(int i = 0; i < phiSupport; ++i)
         step[i] = i * SampRate;
 
-    const int N {L*L*L};
+    const int N {GridNum};
 
     
     for(int n = 0; n < p0.size(); ++n)
@@ -624,7 +651,7 @@ void result_interpret(const double* s, std::vector<double>& phi, std::vector<Par
             for(int j = 0; j < phiSupport; ++j)
                 for(int k = 0; k < phiSupport; ++k)
                 {
-                    sum += s[((xxc - i) & (L - 1)) * L * L+ ((yyc - j) & (L - 1)) * L + ((zzc - k) & (L - 1))]
+                    sum += s[((xxc-i) & (GridLen-1)) * GridLen * GridLen + ((yyc-j) & (GridLen-1)) * GridLen + ((zzc-k) & (GridLen-1))]
                             * phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
                 }
 

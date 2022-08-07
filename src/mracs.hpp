@@ -14,6 +14,8 @@ double Radius;                     // window radius R in Mpc/h
 double SimBoxL;                    // simulation box length in Mpc/h
 int Threads;                       // number of threads that used
 
+int GridLen;                       // side length of MRA frame, == 2^J
+int64_t GridNum;                   // number of cubes, == (2^J)^3
 std::string DIREC;
 std::string RESOL;
 std::string RADII;

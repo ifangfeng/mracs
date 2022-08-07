@@ -9,7 +9,7 @@ phiGenus                        4
 SampRate                        1000
 
 %---Convolution_Kernel
-KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian
+KernelFunc                      0 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian
 Radius                          5 % Mpc/h
 
 %---Main_Directory
