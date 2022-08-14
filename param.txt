@@ -1,5 +1,5 @@
 %---MRA_Resolution
-Resolution                      9
+Resolution                      7
 
 %---Base_Function_Type
 BaseType                        1 % _0_:_BSpline_1_:_Daubechies

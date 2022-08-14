@@ -604,21 +604,23 @@ fftw_complex* sfc_r2c(double* s)
 
 double* inner_product_c2r(fftw_complex* sc, double* w)
 {
+    auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     auto c = new double[GridNum];
-
-    fftw_plan_with_nthreads(omp_get_max_threads());
-    fftw_plan pl = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc, c, FFTW_MEASURE);
 
     #pragma omp parallel for
     for(int i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
     {
-        sc[i][0] *= w[i];
-        sc[i][1] *= w[i]; 
+        sc1[i][0] = w[i] * sc[i][0];
+        sc1[i][1] = w[i] * sc[i][1]; 
     }
+    fftw_plan_with_nthreads(omp_get_max_threads());
+    fftw_plan pl = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, c, FFTW_MEASURE);
+
     fftw_execute(pl);
     #pragma omp parallel for
     for(int i = 0; i < GridNum; ++i) c[i] /= GridNum;
 
+    fftw_free(sc1);
     delete[] w;
     return c;
 }
