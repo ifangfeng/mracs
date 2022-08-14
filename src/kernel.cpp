@@ -5,6 +5,7 @@
 double WindowFunction_Shell(double R, double ki, double kj, double kk);
 double WindowFunction_Sphere(double R, double ki, double kj, double kk);
 double WindowFunction_Gaussian(double R, double ki, double kj, double kk);
+double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, double kk);
 
 
 //shell window function: sin(2Pi*kR)/(2Pi*kR)
@@ -31,4 +32,13 @@ double WindowFunction_Gaussian(double R, double ki, double kj, double kk)
     double k = sqrt(ki * ki + kj * kj + kk * kk);
     double Phase = TWOPI * k * R;
     return pow(1/M_E,Phase*Phase/2);
+}
+
+//dual-ring window function: J_0(2Pi*kRsin(a)sin(b))*cos(2Pi*kRcos(a)cos(b))
+double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, double kk)
+{
+    double k = sqrt(ki * ki + kj * kj + kk * kk);
+    double k_xy = sqrt(ki * ki + kj * kj);
+    double Phase = TWOPI * k * R;
+    return (std::cyl_bessel_j(0,Phase*sin(theta)*k_xy/k))*cos(Phase*cos(theta)*kk/k);
 }

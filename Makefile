@@ -2,7 +2,7 @@
 
 #compiler&flags for MacOS
 CXX       = clang++
-OPTIMIZE  = -fopenmp -std=c++11 -O3 
+OPTIMIZE  = -fopenmp -std=c++20 -O3 
 #compiler&flags for Linux
 #CXX       = g++
 #OPTIMIZE  = -fopenmp -DMKL_lLP64 -m64 -std=c++11 -O3

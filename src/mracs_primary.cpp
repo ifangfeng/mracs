@@ -436,32 +436,26 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, int N_k)
     return p;
 }
 
+
+void force_kernel_type(int x)
+{
+    if(x != KernelFunc)
+    {
+        KernelFunc = x;
+        std::cout << "!kernel function has been forced to " << x << "\n";
+    }
+}
+
 //=======================================================================================
 //||||||||||||||| wfc3d (scaling function coefficients of window function) ||||||||||||||
 //=======================================================================================
-double* window_function_coefficients(std::vector<double>& phi, const double Radius)
+double* window_function_coefficients(std::vector<double>& phi, const double Radius, const double theta)
 {
     const int bandwidth = 1;
     const double DeltaXi = 1./GridLen;
     const double rescaleR {Radius * GridLen/SimBoxL};
 
     std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
-
-    double (*WindowFunction)(double, double, double, double){nullptr};
-
-    // WindowFunction point to correct kernel
-    if(KernelFunc == 0) 
-    {
-        WindowFunction = WindowFunction_Shell;
-    }
-    else if(KernelFunc == 1) 
-    {
-        WindowFunction = WindowFunction_Sphere;
-    }
-    else if(KernelFunc == 2) 
-    {
-        WindowFunction = WindowFunction_Gaussian;
-    }
 
     double* PowerPhi = nullptr;
     if(BaseType == 0)
@@ -474,27 +468,63 @@ double* window_function_coefficients(std::vector<double>& phi, const double Radi
     }
     
     auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
-    // w is even & real
     auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
     double temp;
 
-    #ifdef IN_PARALLEL
-    #pragma omp parallel for private(temp)
-    #endif
+    if(KernelFunc <= 2)
+    {
+        double (*WindowFunction)(double, double, double, double){nullptr};
+        // WindowFunction point to correct kernel
+        if(KernelFunc == 0) 
+        {
+            WindowFunction = WindowFunction_Shell;
+        }
+        else if(KernelFunc == 1) 
+        {
+            WindowFunction = WindowFunction_Sphere;
+        }
+        else if(KernelFunc == 2) 
+        {
+            WindowFunction = WindowFunction_Gaussian;
+        }
+        #ifdef IN_PARALLEL
+        #pragma omp parallel for private(temp)
+        #endif
 
-    for(int i = 0; i <= GridLen; ++i)
-        for(int j = 0; j <= GridLen; ++j)
-            for(int k = 0; k <= GridLen; ++k)
-            {
-                temp = 0;
-                for(int ii = 0; ii < bandwidth; ++ii)
-                    for(int jj = 0; jj < bandwidth; ++jj)
-                        for(int kk = 0; kk < bandwidth; ++kk)
-                            temp += PowerPhi[ii * GridLen + i] * PowerPhi[jj * GridLen + j] * PowerPhi[kk * GridLen + k] * WindowFunction
-                                    (rescaleR, (ii * GridLen + i) * DeltaXi, (jj * GridLen + j) * DeltaXi, (kk * GridLen + k) * DeltaXi);
-                
-                WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = temp;
-            }
+        for(int i = 0; i <= GridLen; ++i)
+            for(int j = 0; j <= GridLen; ++j)
+                for(int k = 0; k <= GridLen; ++k)
+                {
+                    temp = 0;
+                    for(int ii = 0; ii < bandwidth; ++ii)
+                        for(int jj = 0; jj < bandwidth; ++jj)
+                            for(int kk = 0; kk < bandwidth; ++kk) temp +=
+                                PowerPhi[ii * GridLen + i] * PowerPhi[jj * GridLen + j] * PowerPhi[kk * GridLen + k] * WindowFunction
+                                (rescaleR, (ii * GridLen + i) * DeltaXi, (jj * GridLen + j) * DeltaXi, (kk * GridLen + k) * DeltaXi);
+
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = temp;
+                }
+    }
+    else if(KernelFunc == 3)
+    {
+        #ifdef IN_PARALLEL
+        #pragma omp parallel for private(temp)
+        #endif
+        
+        for(int i = 0; i <= GridLen; ++i)
+            for(int j = 0; j <= GridLen; ++j)
+                for(int k = 0; k <= GridLen; ++k)
+                {
+                    temp = 0;
+                    for(int ii = 0; ii < bandwidth; ++ii)
+                        for(int jj = 0; jj < bandwidth; ++jj)
+                            for(int kk = 0; kk < bandwidth; ++kk) temp +=
+                                PowerPhi[ii * GridLen + i] * PowerPhi[jj * GridLen + j] * PowerPhi[kk * GridLen + k] * WindowFunction_Dual_Ring
+                                (rescaleR, theta, (ii * GridLen + i) * DeltaXi, (jj * GridLen + j) * DeltaXi, (kk * GridLen + k) * DeltaXi);
+
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = temp;
+                }
+    }
 
     #ifdef IN_PARALLEL     
     #pragma omp parallel for
@@ -629,9 +659,6 @@ void result_interpret(const double* s, std::vector<double>& phi, std::vector<Par
     for(int i = 0; i < phiSupport; ++i)
         step[i] = i * SampRate;
 
-    const int N {GridNum};
-
-    
     for(int n = 0; n < p0.size(); ++n)
     {
         double sum {0};

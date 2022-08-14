@@ -17,9 +17,7 @@ int main()
 
     std::vector<double> r_log;
     std::vector<double> result;
-    const int L{1<<Resolution};
-    const int N{L*L*L};
-    const double rho_bar{p.size()*4./3*M_PI*pow(Radius*L/SimBoxL, 3)};
+    const double rho_bar{p.size()*4./3*M_PI*pow(Radius*GridLen/SimBoxL, 3)};
 
     for(int i = 0; i <= TESTPOINTS; ++i)
     {
@@ -27,12 +25,9 @@ int main()
         r_log.push_back(r0 * pow(r1/r0, i/static_cast<double>(TESTPOINTS)));
         auto w = window_function_coefficients(phi, r_log[i]);
         auto c = inner_product_c2r(sc, w);
-        inner_product(c, c, N);
-        result.push_back(array_sum(c, N)/pow(rho_bar, 2)/static_cast<double>(N)-1);
+        result.push_back(inner_product(c, c, GridNum)/pow(rho_bar, 2)/static_cast<double>(GridNum)-1);
     }
 
-    for(auto x : r_log) std::cout << x << " ";
-    std::cout << std::endl;
-    for(auto x : result) std::cout << x << " ";
-    std::cout << std::endl;
+    for(auto x : r_log) std::cout << x << " "; std::cout << std::endl;
+    for(auto x : result) std::cout << x << " "; std::cout << std::endl;
 }
