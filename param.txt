@@ -9,11 +9,11 @@ phiGenus                        4
 SampRate                        1000
 
 %---Convolution_Kernel
-KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian
+KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian_3_:_Ring
 Radius                          5 % Mpc/h
 
 %---Main_Directory
-DIREC                           /Users/feng/Public/mracs
+DIREC                           .
 
 %---Particle_data
 MilleCata                       ../simdata/croton_etal/croton_etal.ugriz.mini.bin

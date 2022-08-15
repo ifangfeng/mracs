@@ -17,7 +17,7 @@ int main()
     auto sc = sfc_r2c(s);
 
     std::vector<double> r_log, xi_r;
-    for(int i = 0; i <= TESTPOINTS; ++i)
+    for(int i = 0; i < TESTPOINTS; ++i)
     {
         std::cout << "|" << std::setw(3) << i << "| th point: ";
         r_log.push_back(R0 * pow((R1/R0), static_cast<double>(i)/TESTPOINTS));
