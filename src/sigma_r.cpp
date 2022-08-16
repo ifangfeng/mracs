@@ -25,7 +25,7 @@ int main()
         auto c = inner_product_c2r(sc, w);
         var_r.push_back(inner_product(c,c,GridNum)/pow(p.size()*4./3*M_PI*pow(r_log[i]/SimBoxL,3),2)/GridNum-1);
     }
-    for(auto x : r_log) std::cout << x << " "; std::cout << std::endl;
-    for(auto x : var_r) std::cout << sqrt(x) << " "; std::cout << std::endl;
+    for(auto x : r_log) std::cout << x << ", "; std::cout << std::endl;
+    for(auto x : var_r) std::cout << sqrt(x) << ", "; std::cout << std::endl;
 }
 
