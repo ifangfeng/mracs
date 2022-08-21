@@ -1,8 +1,8 @@
 #include"mracs.hpp"
 
-#define R0 0.5           // Mpc/h
+#define R0 10           // Mpc/h
 #define R1 50.           // Mpc/h
-#define TESTPOINTS 100
+#define TESTPOINTS 1
 
 int main()
 {
@@ -22,7 +22,7 @@ int main()
         std::cout << "|" << std::setw(3) << i << "| th point: ";
         r_log.push_back(R0 * pow((R1/R0), static_cast<double>(i)/TESTPOINTS));
         auto w = window_function_coefficients(phi, r_log[i], 0);
-        auto c = inner_product_c2r(sc, w);
+        auto c = convolution_c2r(sc, w);
         xi_r.push_back(inner_product(s, c, GridNum) * GridNum/pow(p.size(), 2) - 1);
     }
     for(auto x : r_log) std::cout << x << ", "; std::cout << std::endl;
