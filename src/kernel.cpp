@@ -40,5 +40,5 @@ double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, do
     double k = sqrt(ki * ki + kj * kj + kk * kk);
     double k_xy = sqrt(ki * ki + kj * kj);
     double Phase = TWOPI * k * R;
-    return 1;//(std::cyl_bessel_j(0,Phase*sin(theta)*k_xy/k))*cos(Phase*cos(theta)*kk/k);
+    return (std::cyl_bessel_j(0,Phase*sin(theta)*k_xy/k))*cos(Phase*cos(theta)*kk/k);
 }

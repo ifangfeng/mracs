@@ -1,6 +1,6 @@
 #makefile for main, extr, phi, minitest and tinytest
 #system type would be Linux or MacOS
-SYSTEM	  = MacOS
+SYSTEM	  = Linux
 
 ifeq ($(SYSTEM), MacOS)
 #compiler&flags for MacOS
