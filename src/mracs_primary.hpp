@@ -116,17 +116,25 @@ struct Particle
     double weight;
 };
 
+struct Offset
+{
+    double dx;
+    double dy;
+    double dz;
+};
+
 // defined in mracs.cpp
 void welcome();
 void read_parameter();
 std::vector<double> read_in_phi(const int phiGenus);
+double* sfc_offset(std::vector<double>& phi, std::vector<Particle>& p, Offset v);
 double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Particle>& p);
 double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k);
 double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k);
 double* window_function_coefficients(std::vector<double>& phi, const double Radius, const double theta);
 double* specialized_convolution_3d(double* s, double* w);
-double* inner_product_c2r(fftw_complex* sc, double* w);
+double* convolution_c2r(fftw_complex* sc, double* w);
 fftw_complex* sfc_r2c(double* s);
 double array_sum(double* w, int N);
 double inner_product(double* v0, double* v1, int64_t N);

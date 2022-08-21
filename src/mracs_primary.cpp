@@ -238,7 +238,7 @@ std::vector<double> read_in_phi(const int phiGenus)
 //=======================================================================================
 //||||||||||||||| sfc3d (scaling function coefficients of density field) ||||||||||||||||
 //=======================================================================================
-double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Particle>& p)
+double* sfc_offset(std::vector<double>& phi, std::vector<Particle>& p, Offset v)
 {   
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
@@ -273,15 +273,15 @@ double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Part
     {
         for(int ii = 0; ii < phiSupport * phiSupport * phiSupport; ++ii) s_temp[ii] = 0;
         // rescale the particle coordinates to MRA framework
-        double xx = p[n].x * ScaleFactor;
-        double yy = p[n].y * ScaleFactor;
-        double zz = p[n].z * ScaleFactor;
+        double xx = (p[n].x + v.dx) * ScaleFactor;
+        double yy = (p[n].y + v.dy) * ScaleFactor;
+        double zz = (p[n].z + v.dz) * ScaleFactor;
 
         // get the 'Coarse' and 'Finer' coodinate, e.g. if
         // position p == 63.25678, then c == 63, f == 256
-        int xxc = xx, xxf = SampRate * (xx - xxc);      
-        int yyc = yy, yyf = SampRate * (yy - yyc);      
-        int zzc = zz, zzf = SampRate * (zz - zzc);
+        int xxc = floor(xx), xxf = SampRate * (xx - xxc);      
+        int yyc = floor(yy), yyf = SampRate * (yy - yyc);      
+        int zzc = floor(zz), zzf = SampRate * (zz - zzc);
     
         for(int i = 0; i < phiSupport; ++i)
             for(int j = 0; j < phiSupport; ++j)
@@ -304,6 +304,16 @@ double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Part
 
     return s;
 }
+
+double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Particle>& p)
+{
+    Offset a;
+    a.dx = 0;
+    a.dy = 0;
+    a.dz = 0;
+    return sfc_offset(phi, p, a);
+}
+
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // read in Real-Value vector v, return an array s, which store the continuous fourier
@@ -602,7 +612,7 @@ fftw_complex* sfc_r2c(double* s)
     return sc;
 }
 
-double* inner_product_c2r(fftw_complex* sc, double* w)
+double* convolution_c2r(fftw_complex* sc, double* w)
 {
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     auto c = new double[GridNum];
@@ -634,7 +644,7 @@ double* specialized_convolution_3d(double* s, double* w)
     auto begin3 = std::chrono::steady_clock::now();
 
     auto sc = sfc_r2c(s);
-    auto c = inner_product_c2r(sc, w);
+    auto c = convolution_c2r(sc, w);
     auto end3 = std::chrono::steady_clock::now();
 
     std::cout << "Time difference 3 convl3d  = "
