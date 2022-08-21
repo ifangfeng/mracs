@@ -21,3 +21,4 @@ std::string RESOL;
 std::string RADII;
 std::string GENUS;
 std::string MilleCata;
+std::vector<double> phi;

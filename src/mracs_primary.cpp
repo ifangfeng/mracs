@@ -123,6 +123,17 @@ void read_parameter()
     GENUS = "DaubG" + std::to_string(phiGenus);
     std::cout << "---Grid 3d N = "<< GridLen << "^3"<< std::endl;
 
+    if(BaseType == 0)
+    {
+        phi = B_Spline(phiGenus, SampRate);
+        phi.push_back(0);
+        phi.push_back(phiGenus + 1);
+    }
+    else if (BaseType == 1)
+    {
+        phi = Daubechies_Phi(phiGenus);
+    }
+
 }
 
 
@@ -217,6 +228,7 @@ std::vector<double> Daubechies_Phi(const int phiGenus)
 //=======================================================================================
 //---- numerical value of n_th B-Spline or Daubechies scaling function data 
 //---------------------------------------------------------------------------------------
+/*
 std::vector<double> read_in_phi(const int phiGenus)
 {
     std::vector<double> phi;
@@ -232,13 +244,13 @@ std::vector<double> read_in_phi(const int phiGenus)
     }
     return phi;
 }
-
+*/
 
 
 //=======================================================================================
 //||||||||||||||| sfc3d (scaling function coefficients of density field) ||||||||||||||||
 //=======================================================================================
-double* sfc_offset(std::vector<double>& phi, std::vector<Particle>& p, Offset v)
+double* sfc_offset(std::vector<Particle>& p, Offset v)
 {   
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
@@ -305,13 +317,13 @@ double* sfc_offset(std::vector<double>& phi, std::vector<Particle>& p, Offset v)
     return s;
 }
 
-double* scaling_function_coefficients(std::vector<double>& phi, std::vector<Particle>& p)
+double* sfc(std::vector<Particle>& p)
 {
     Offset a;
     a.dx = 0;
     a.dy = 0;
     a.dz = 0;
-    return sfc_offset(phi, p, a);
+    return sfc_offset(p, a);
 }
 
 
@@ -459,7 +471,7 @@ void force_kernel_type(int x)
 //=======================================================================================
 //||||||||||||||| wfc3d (scaling function coefficients of window function) ||||||||||||||
 //=======================================================================================
-double* window_function_coefficients(std::vector<double>& phi, const double Radius, const double theta)
+double* wfc(const double Radius, const double theta)
 {
     const int bandwidth = 1;
     const double DeltaXi = 1./GridLen;
@@ -612,7 +624,7 @@ fftw_complex* sfc_r2c(double* s)
     return sc;
 }
 
-double* convolution_c2r(fftw_complex* sc, double* w)
+double* convol_c2r(fftw_complex* sc, double* w)
 {
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     auto c = new double[GridNum];
@@ -639,12 +651,12 @@ double* convolution_c2r(fftw_complex* sc, double* w)
 // s and w are 3d Real array, s in physical space while w in frequency space, return 
 // as double* c , convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J
 //=======================================================================================
-double* specialized_convolution_3d(double* s, double* w)
+double* half_convol(double* s, double* w)
 {
     auto begin3 = std::chrono::steady_clock::now();
 
     auto sc = sfc_r2c(s);
-    auto c = convolution_c2r(sc, w);
+    auto c = convol_c2r(sc, w);
     auto end3 = std::chrono::steady_clock::now();
 
     std::cout << "Time difference 3 convl3d  = "
@@ -658,7 +670,7 @@ double* specialized_convolution_3d(double* s, double* w)
 //=======================================================================================
 //|||||||||||||||||||||||||||||||||||| Result interpret |||||||||||||||||||||||||||||||||
 //=======================================================================================
-void result_interpret(const double* s, std::vector<double>& phi, std::vector<Particle>& p0, std::vector<double>& result)
+void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result)
 {
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
