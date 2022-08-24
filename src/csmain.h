@@ -10,7 +10,7 @@
 #include<random>
 #include<cmath>
 #include<omp.h>
-#include"fourier.hpp"
+
 
 #ifndef TWOPI
 #define TWOPI M_PI*2
