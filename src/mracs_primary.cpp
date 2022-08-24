@@ -1,5 +1,5 @@
 #include"mracs_primary.hpp"
-#include"kernel.hpp"
+
 
 
 #define LOWER_RESOLUTION 8
@@ -116,7 +116,7 @@ void read_parameter()
     }
 
     GridLen = 1 << Resolution;
-    GridNum = 1 << Resolution*3;
+    GridNum = 1UL << Resolution*3;
 
     RESOL = "L" + std::to_string(GridLen);
     RADII = "R" + std::to_string(Radius);
@@ -281,7 +281,7 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
     #pragma omp parallel for reduction (+:s_temp)
     #endif
     
-    for(int n = 0; n < p.size(); ++n)
+    for(size_t n = 0; n < p.size(); ++n)
     {
         for(int ii = 0; ii < phiSupport * phiSupport * phiSupport; ++ii) s_temp[ii] = 0;
         // rescale the particle coordinates to MRA framework
@@ -319,10 +319,7 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
 
 double* sfc(std::vector<Particle>& p)
 {
-    Offset a;
-    a.dx = 0;
-    a.dy = 0;
-    a.dz = 0;
+    Offset a(0., 0., 0.);
     return sfc_offset(p, a);
 }
 
@@ -331,9 +328,9 @@ double* sfc(std::vector<Particle>& p)
 // read in Real-Value vector v, return an array s, which store the continuous fourier
 // transform of v, located in frequency space [k0, k1] with N_k + 1 sampling points
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k)
+double* Spectrum1(std::vector<double>& v, double k0, double k1, size_t N_k)
 {
-    int N_x= v.size()-2;
+    size_t N_x= v.size()-2;
     double x0 = v[v.size()-2];
     double x1 = v[v.size()-1];
     
@@ -346,9 +343,9 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k)
     double DeltaPhase = -TWOPI * k0 * Delta_x;
     
     double* s = new double[(N_k +1) * 2]();
-    for(int i = 0; i <= N_k; ++i)
+    for(size_t i = 0; i <= N_k; ++i)
     {
-        for(int j = 0; j < N_x; ++j)
+        for(size_t j = 0; j < N_x; ++j)
         { 
             Phase = -TWOPI * (k0 + i * Delta_k) * (x0 + j * Delta_x);
             Real  = cos(Phase);
@@ -364,9 +361,9 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // faster but slightly less accuate than Spectrum1()
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k)
+double* Spectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
 {
-    int N_x = v.size()-2;
+    size_t N_x = v.size()-2;
     double x0 = v[v.size()-2];
     double x1 = v[v.size()-1];
     
@@ -383,9 +380,9 @@ double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k)
     
 
     double* s = new double[(N_k +1) * 2]();
-    for(int i = 0; i <= N_k; ++i)
+    for(size_t i = 0; i <= N_k; ++i)
     {
-        for(int j = 0; j < N_x; ++j)
+        for(size_t j = 0; j < N_x; ++j)
         {
             Real  = cos(Phase);
             Image = sin(Phase);
@@ -405,11 +402,11 @@ double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k)
 // read in Real Value Vector v, calculate its power spectrum located in 
 // frequency space [k0, k1] with N_k + 1 sampling points, return as array p[]
 //=======================================================================================
-double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k)
+double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
 {
     double* s = Spectrum(v, k0, k1, N_k);
     double* p = new double[N_k + 1];
-    for(int i = 0; i <= N_k; ++i)
+    for(size_t i = 0; i <= N_k; ++i)
         p[i] = s[2*i] * s[2*i] + s[2*i+1] * s[2*i+1];
     delete[] s;
     return p;
@@ -419,13 +416,13 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k)
 // calculate m_th B_Spline dual's power spectrum located in frequency
 // space [k0, k1] with N_k + 1 sampling points, return as array p[]
 //=======================================================================================
-double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, int N_k)
+double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k)
 {
     double* p = new double[N_k + 1];
     double* a = new double[N_k + 1];
     
     std::vector<double> c = B_Spline(2*m+1, 1);
-    for(int i = 0; i <= N_k; ++i)
+    for(size_t i = 0; i <= N_k; ++i)
     {
         a[i] = c[m+1];
     }
@@ -433,7 +430,7 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, int N_k)
     double k = k0;
     for(int n = 1; n <= m; ++n)
     {
-        for(int i = 0; i <= N_k; ++i)
+        for(size_t i = 0; i <= N_k; ++i)
         {
             a[i] += 2*c[m+n+1] * cos(TWOPI*n*k);
             k += Delta_k;
@@ -441,7 +438,7 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, int N_k)
         k = k0;
     }
     k = k0;
-    for(int i = 0; i <= N_k; ++i)
+    for(size_t i = 0; i <= N_k; ++i)
     {
         if(k == 0)
         {
@@ -473,7 +470,6 @@ void force_kernel_type(int x)
 //=======================================================================================
 double* wfc(const double Radius, const double theta)
 {
-    const int bandwidth = 1;
     const double DeltaXi = 1./GridLen;
     const double rescaleR {Radius * GridLen/SimBoxL};
 
@@ -482,16 +478,15 @@ double* wfc(const double Radius, const double theta)
     double* PowerPhi = nullptr;
     if(BaseType == 0)
     {
-        PowerPhi = B_Spline_Dual_Power_Spectrum(phiGenus, 0, bandwidth, GridLen * bandwidth);
+        PowerPhi = B_Spline_Dual_Power_Spectrum(phiGenus, 0, 1, GridLen);
     }
     else if (BaseType == 1)
     {
-        PowerPhi = PowerSpectrum(phi, 0, bandwidth, GridLen * bandwidth);
+        PowerPhi = PowerSpectrum(phi, 0, 1, GridLen);
     }
-    
+
     auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
     auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
-    double temp;
 
     if(KernelFunc <= 2)
     {
@@ -510,51 +505,35 @@ double* wfc(const double Radius, const double theta)
             WindowFunction = WindowFunction_Gaussian;
         }
         #ifdef IN_PARALLEL
-        #pragma omp parallel for private(temp)
+        #pragma omp parallel for
         #endif
-
-        for(int i = 0; i <= GridLen; ++i)
-            for(int j = 0; j <= GridLen; ++j)
-                for(int k = 0; k <= GridLen; ++k)
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
                 {
-                    temp = 0;
-                    for(int ii = 0; ii < bandwidth; ++ii)
-                        for(int jj = 0; jj < bandwidth; ++jj)
-                            for(int kk = 0; kk < bandwidth; ++kk) temp +=
-                                PowerPhi[ii * GridLen + i] * PowerPhi[jj * GridLen + j] * PowerPhi[kk * GridLen + k] * WindowFunction
-                                (rescaleR, (ii * GridLen + i) * DeltaXi, (jj * GridLen + j) * DeltaXi, (kk * GridLen + k) * DeltaXi);
-
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = temp;
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
+                    PowerPhi[i] * PowerPhi[j] * PowerPhi[k] * WindowFunction(rescaleR, i * DeltaXi, j * DeltaXi, k * DeltaXi);
                 }
     }
     else if(KernelFunc == 3)
     {
         #ifdef IN_PARALLEL
-        #pragma omp parallel for private(temp)
+        #pragma omp parallel for 
         #endif
-        
-        for(int i = 0; i <= GridLen; ++i)
-            for(int j = 0; j <= GridLen; ++j)
-                for(int k = 0; k <= GridLen; ++k)
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
                 {
-                    temp = 0;
-                    for(int ii = 0; ii < bandwidth; ++ii)
-                        for(int jj = 0; jj < bandwidth; ++jj)
-                            for(int kk = 0; kk < bandwidth; ++kk) temp +=
-                                PowerPhi[ii * GridLen + i] * PowerPhi[jj * GridLen + j] * PowerPhi[kk * GridLen + k] * WindowFunction_Dual_Ring
-                                (rescaleR, theta, (ii * GridLen + i) * DeltaXi, (jj * GridLen + j) * DeltaXi, (kk * GridLen + k) * DeltaXi);
-
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = temp;
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
+                    PowerPhi[i] * PowerPhi[j] * PowerPhi[k] * WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
                 }
     }
-
     #ifdef IN_PARALLEL     
     #pragma omp parallel for
     #endif
-    
-    for(int i = 0; i < GridLen; ++i)
-        for(int j = 0; j < GridLen; ++j)
-            for(int k = 0; k < GridLen/2+1; ++k)
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2+1; ++k)
             {
                 w[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k]
                 = WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
@@ -578,14 +557,14 @@ double* wfc(const double Radius, const double theta)
 }
 
 // calculate two array's inner product return as double
-double inner_product(double* v0, double* v1, int64_t N)
+double inner_product(double* v0, double* v1, size_t N)
 {
     double sum {0};
     #ifdef IN_PARALLEL
     #pragma omp parallel for reduction (+:sum)
     #endif
     
-    for(int64_t i = 0; i < N; ++i)
+    for(size_t i = 0; i < N; ++i)
     {
         sum += v0[i] * v1[i];
     }
@@ -593,7 +572,7 @@ double inner_product(double* v0, double* v1, int64_t N)
 }
 
 // retrun sum of all elements of array w, w has length N
-double array_sum(double* w, int N)
+double array_sum(double* w, size_t N)
 {
     double sum {0};
     #ifdef IN_PARALLEL
@@ -630,7 +609,7 @@ double* convol_c2r(fftw_complex* sc, double* w)
     auto c = new double[GridNum];
 
     #pragma omp parallel for
-    for(int i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
+    for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
     {
         sc1[i][0] = w[i] * sc[i][0];
         sc1[i][1] = w[i] * sc[i][1]; 
@@ -640,7 +619,7 @@ double* convol_c2r(fftw_complex* sc, double* w)
 
     fftw_execute(pl);
     #pragma omp parallel for
-    for(int i = 0; i < GridNum; ++i) c[i] /= GridNum;
+    for(size_t i = 0; i < GridNum; ++i) c[i] /= GridNum;
 
     fftw_free(sc1);
     delete[] w;
@@ -683,7 +662,7 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
     for(int i = 0; i < phiSupport; ++i)
         step[i] = i * SampRate;
 
-    for(int n = 0; n < p0.size(); ++n)
+    for(size_t n = 0; n < p0.size(); ++n)
     {
         double sum {0};
 
@@ -775,7 +754,7 @@ void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>
             }
         count[n]= temp + inner_index.size() * p.size();
     }
-    for(int i = 0; i < p0.size(); ++i)
+    for(size_t i = 0; i < p0.size(); ++i)
         result.push_back(count[i]);
 
     std::chrono::steady_clock::time_point end4 = std::chrono::steady_clock::now();

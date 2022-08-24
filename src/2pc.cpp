@@ -1,8 +1,8 @@
 #include"mracs.hpp"
 
-#define R0 10           // Mpc/h
+#define R0 0.5           // Mpc/h
 #define R1 50.           // Mpc/h
-#define NUMTEST 1
+#define NUMTEST 10
 
 int main()
 {
@@ -23,6 +23,7 @@ int main()
         auto w = wfc(r_log[i], 0);
         auto c = convol_c2r(sc, w);
         xi_r.push_back(inner_product(s, c, GridNum) * GridNum/pow(p.size(), 2) - 1);
+        delete[] c;
     }
     for(auto x : r_log) std::cout << x << ", "; std::cout << std::endl;
     for(auto x : xi_r)  std::cout << x << ", "; std::cout << std::endl;

@@ -12,13 +12,11 @@
 #include<omp.h>
 #include"fourier.hpp"
 
-
-
-#define IN_PARALLEL
-
 #ifndef TWOPI
 #define TWOPI M_PI*2
 #endif
+
+#define IN_PARALLEL
 
 #ifndef PARAMETERS_NUM
 #define PARAMETERS_NUM 10
@@ -32,15 +30,20 @@ extern int KernelFunc;                    // window function, 0:shell, 1:sphere,
 extern double Radius;                     // window radius R in Mpc/h
 extern double SimBoxL;                    // simulation box length in Mpc/h
 extern int Threads;                       // number of threads that used
-
-extern int GridLen;                       // side length of MRA frame, == 2^J
-extern int64_t GridNum;                   // number of cubes, == (2^J)^3
+extern uint64_t GridLen;                  // side length of MRA frame, == 2^J
+extern uint64_t GridNum;                  // number of cubes, == (2^J)^3
 extern std::string DIREC;
 extern std::string RESOL;
 extern std::string RADII;
 extern std::string GENUS;
 extern std::string MilleCata;
 extern std::vector<double> phi;
+
+// kernel function declared
+double WindowFunction_Shell(double R, double ki, double kj, double kk);
+double WindowFunction_Sphere(double R, double ki, double kj, double kk);
+double WindowFunction_Gaussian(double R, double ki, double kj, double kk);
+double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, double kk);
 
 
 // needed for binary I/O
@@ -122,23 +125,30 @@ struct Offset
     double dx;
     double dy;
     double dz;
+    Offset(double x, double y, double z)
+    {
+        dx = x;
+        dy = y;
+        dz = z;
+    }
 };
 
 // defined in mracs.cpp
 void welcome();
 void read_parameter();
-std::vector<double> read_in_phi(const int phiGenus);
 double* sfc_offset(std::vector<Particle>& p, Offset v);
 double* sfc(std::vector<Particle>& p);
-double* Spectrum1(std::vector<double>& v, double k0, double k1, int N_k);
-double* Spectrum(std::vector<double>& v, double k0, double k1, int N_k);
-double* PowerSpectrum(std::vector<double>& v, double k0, double k1, int N_k);
+std::vector<double> Daubechies_Phi(const int phiGenus);
+std::vector<double> B_Spline(const int n, const int sampleRate);
+double* Spectrum1(std::vector<double>& v, double k0, double k1, size_t N_k);
+double* Spectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
+double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* wfc(const double Radius, const double theta);
 double* half_convol(double* s, double* w);
 double* convol_c2r(fftw_complex* sc, double* w);
 fftw_complex* sfc_r2c(double* s);
-double array_sum(double* w, int N);
-double inner_product(double* v0, double* v1, int64_t N);
+double array_sum(double* w, size_t N);
+double inner_product(double* v0, double* v1, size_t N);
 void force_kernel_type(int x);
 void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result);
 void de_duplicate_push_back(std::vector<Index>& index, const int i, const int j, const int k);

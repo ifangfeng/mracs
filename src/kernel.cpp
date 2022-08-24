@@ -1,11 +1,10 @@
+#include"mracs_primary.hpp"
 #include<cmath>
 
+#ifndef TWOPI
 #define TWOPI M_PI*2
+#endif
 
-double WindowFunction_Shell(double R, double ki, double kj, double kk);
-double WindowFunction_Sphere(double R, double ki, double kj, double kk);
-double WindowFunction_Gaussian(double R, double ki, double kj, double kk);
-double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, double kk);
 
 
 //shell window function: sin(2Pi*kR)/(2Pi*kR)

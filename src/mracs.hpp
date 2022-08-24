@@ -1,5 +1,5 @@
 #include"mracs_primary.hpp"
-#include"kernel.hpp"
+
 
 // read_in_simdata fuction declared
 std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string MilleCata);
@@ -13,9 +13,8 @@ int KernelFunc;                    // window function, 0:shell, 1:sphere, 2:Gaus
 double Radius;                     // window radius R in Mpc/h
 double SimBoxL;                    // simulation box length in Mpc/h
 int Threads;                       // number of threads that used
-
-int GridLen;                       // side length of MRA frame, == 2^J
-int64_t GridNum;                   // number of cubes, == (2^J)^3
+uint64_t GridLen;                  // side length of MRA frame, == 2^J
+uint64_t GridNum;                  // number of cubes, == (2^J)^3
 std::string DIREC;
 std::string RESOL;
 std::string RADII;
