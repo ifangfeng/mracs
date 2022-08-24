@@ -1,4 +1,4 @@
-#include"mracs.hpp"
+#include"mracs.h"
 
 #define R0 0.5           // Mpc/h
 #define R1 50.           // Mpc/h

@@ -1,4 +1,4 @@
-#include"mracs.hpp"
+#include"mracs.h"
 
 //#define UNIFORM
 #define GRIDSIZE 128

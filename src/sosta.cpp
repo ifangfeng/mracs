@@ -2,7 +2,7 @@
 // (1) two-point correlation (with or without volume-average) function
 // (2) density variance with top-hat filter
 
-#include"mracs.hpp"
+#include"mracs.h"
 
 #define R0 0.5           // Mpc/h
 #define R1 50.           // Mpc/h

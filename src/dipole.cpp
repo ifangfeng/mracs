@@ -1,4 +1,4 @@
-#include"mracs.hpp"
+#include"mracs.h"
 
 #define R 10.
 #define NUMTEST 1

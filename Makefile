@@ -49,7 +49,7 @@ endif
 #MRACS source files 
 SRC_DIR   = src
 BUILD_DIR = build
-SRCS      = csmain.cpp read_in_simdata.cpp kernel.cpp
+SRCS      = csmain.cpp readin.cpp kernel.cpp
 OBJS     := $(subst .cpp,.o,$(SRCS))
 SRCS     := $(addprefix $(SRC_DIR)/, $(SRCS))
 OBJS     := $(addprefix $(BUILD_DIR)/, $(OBJS))

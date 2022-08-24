@@ -1,4 +1,4 @@
-#include"mracs.hpp"
+#include"mracs.h"
 
 int main()
 {

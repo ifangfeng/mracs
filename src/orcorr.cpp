@@ -1,6 +1,6 @@
-// with-ORiented CORRelation function
+// ORiented CORRelation function
 
-#include"mracs.hpp"
+#include"mracs.h"
 
 #define R 10.           // Mpc/h
 #define NUMTEST 20

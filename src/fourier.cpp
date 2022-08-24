@@ -1,4 +1,4 @@
-#include"fourier.hpp"
+#include"fourier.h"
 
 
 //FFT written by feng
