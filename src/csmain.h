@@ -143,6 +143,7 @@ std::vector<double> B_Spline(const int n, const int sampleRate);
 double* Spectrum1(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* Spectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
+double* PowerPhiFunc(const size_t N);
 double* wfc(const double Radius, const double theta);
 double* half_convol(double* s, double* w);
 double* convol_c2r(fftw_complex* sc, double* w);

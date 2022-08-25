@@ -6,21 +6,21 @@
 
 #define R0 0.5           // Mpc/h
 #define R1 50.           // Mpc/h
-#define NUMTEST 11
+#define NUMTEST 10
 
 int main()
 {
     read_parameter();
     std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(MilleCata);
-    std::vector<Particle> p;
-    for(Galaxy i : g) p.push_back({i.x, i.y, i.z, i.BulgeMass+i.StellarMass});
+    std::vector<Particle> p; for(Galaxy i : g) p.push_back({i.x, i.y, i.z, i.BulgeMass+i.StellarMass});
+    std::vector<double> r_log, xi_r, var_r;
 
+    for(int i = 0; i < NUMTEST; ++i) 
+    {
+        r_log.push_back(R0 * pow((R1/R0), static_cast<double>(i)/NUMTEST));
+    }
     auto s = sfc(p);
     auto sc = sfc_r2c(s);
-
-    std::vector<double> r_log, xi_r, var_r;
-    for(int i = 0; i < NUMTEST; ++i) r_log.push_back(R0 * pow((R1/R0), static_cast<double>(i)/NUMTEST));
-
     // force to shell kernel for two-point correlation
     force_kernel_type(0);
     for(int i = 0; i < NUMTEST; ++i)

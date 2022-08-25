@@ -4,6 +4,7 @@
 
 #define LOWER_RESOLUTION 8
 
+double* PowerPhi=nullptr;
 void welcome()
 {
     
@@ -107,7 +108,7 @@ void read_parameter()
 
     if(npri == PARAMETERS_NUM)     
     {
-        std::cout << "Done!"<< std::endl;
+        std::cout << "Initializing..."<< std::endl;
     }
     else
     {
@@ -121,8 +122,7 @@ void read_parameter()
     RESOL = "L" + std::to_string(GridLen);
     RADII = "R" + std::to_string(Radius);
     GENUS = "DaubG" + std::to_string(phiGenus);
-    std::cout << "---Grid 3d N = "<< GridLen << "^3"<< std::endl;
-
+    
     if(BaseType == 0)
     {
         phi = B_Spline(phiGenus, SampRate);
@@ -134,6 +134,9 @@ void read_parameter()
         phi = Daubechies_Phi(phiGenus);
     }
 
+    PowerPhi = PowerPhiFunc(GridLen);
+
+    std::cout << "Done!"<< std::endl;
 }
 
 
@@ -455,14 +458,44 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k)
     return p;
 }
 
+// power_phi array
+double* PowerPhiFunc(const size_t N)
+{
+    double* PowerSpectral = nullptr;
+    if(BaseType == 0)
+    {
+        PowerSpectral = B_Spline_Dual_Power_Spectrum(phiGenus, 0, 1, N);
+    }
+    else if (BaseType == 1)
+    {
+        PowerSpectral = PowerSpectrum(phi, 0, 1, N);
+    }
+
+    auto a = new double[(N+1)*(N+1)*(N+1)];
+
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i <= N; ++i)
+        for(size_t j = 0; j <= N; ++j)
+            for(size_t k = 0; k <= N; ++k)
+            {
+                a[i * (N+1) * (N+1) + j * (N+1) + k] = PowerSpectral[i] * PowerSpectral[j] * PowerSpectral[k];
+            }
+    return a;
+}
+
 
 void force_kernel_type(int x)
 {
     if(x != KernelFunc)
     {
         KernelFunc = x;
+        delete[] PowerPhi;
+        PowerPhi = PowerPhiFunc(GridLen);
         std::cout << "!kernel function has been forced to " << x << "\n";
     }
+
 }
 
 //=======================================================================================
@@ -474,16 +507,6 @@ double* wfc(const double Radius, const double theta)
     const double rescaleR {Radius * GridLen/SimBoxL};
 
     std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
-
-    double* PowerPhi = nullptr;
-    if(BaseType == 0)
-    {
-        PowerPhi = B_Spline_Dual_Power_Spectrum(phiGenus, 0, 1, GridLen);
-    }
-    else if (BaseType == 1)
-    {
-        PowerPhi = PowerSpectrum(phi, 0, 1, GridLen);
-    }
 
     auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
     auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
@@ -512,11 +535,23 @@ double* wfc(const double Radius, const double theta)
                 for(size_t k = 0; k <= GridLen; ++k)
                 {
                     WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
-                    PowerPhi[i] * PowerPhi[j] * PowerPhi[k] * WindowFunction(rescaleR, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+                    WindowFunction(rescaleR, i * DeltaXi, j * DeltaXi, k * DeltaXi) * PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
                 }
     }
     else if(KernelFunc == 3)
     {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * rescaleR * cos(theta) * i*DeltaXi);
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+        #ifdef IN_PARALLEL
+        #pragma omp parallel for 
+        #endif
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+            {
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));
+            }
         #ifdef IN_PARALLEL
         #pragma omp parallel for 
         #endif
@@ -524,9 +559,19 @@ double* wfc(const double Radius, const double theta)
             for(size_t j = 0; j <= GridLen; ++j)
                 for(size_t k = 0; k <= GridLen; ++k)
                 {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
-                    PowerPhi[i] * PowerPhi[j] * PowerPhi[k] * WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
+                    //WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
                 }
+        #ifdef IN_PARALLEL
+        #pragma omp parallel for 
+        #endif
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+                }
+        delete[] fxy;
     }
     #ifdef IN_PARALLEL     
     #pragma omp parallel for
