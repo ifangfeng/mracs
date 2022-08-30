@@ -19,7 +19,7 @@ int main()
             for(int k = 0; k < GRIDSIZE; ++k)
               p.push_back(Particle{i*scalefactor, j*scalefactor, k*scalefactor, 1.});
     #else
-    auto g   = read_in_Millennium_Run_galaxy_catalog(MilleCata);
+    auto g   = read_in_Millennium_Run_galaxy_catalog(DataDirec);
     for(auto i : g) p.push_back(Particle{i.x, i.y, i.z, 1.});
     #endif
 

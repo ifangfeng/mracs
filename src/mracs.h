@@ -2,7 +2,8 @@
 
 
 // read_in_simdata fuction declared
-std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string MilleCata);
+std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string DataDirec);
+std::vector<Particle> read_in_TNG_3vector(std::string DataDirec);
 
 //global variables for MRACS interface
 int Resolution;                    // MRA scale parameter J
@@ -19,5 +20,5 @@ std::string DIREC;
 std::string RESOL;
 std::string RADII;
 std::string GENUS;
-std::string MilleCata;
+std::string DataDirec;
 std::vector<double> phi;

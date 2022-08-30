@@ -1,20 +1,31 @@
 #include"mracs.h"
 
+#define RANDOM
+#define NUMRAN 18960
 #define NUMTEST 100
 
 int main()
 {
     read_parameter();
-    std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(MilleCata);
+    #ifdef RANDOM
+    std::vector<Particle> p;
+    std::default_random_engine e;
+    std::uniform_real_distribution<double> u(0, SimBoxL);
+    for(size_t i = 0; i < NUMRAN; ++i) p.push_back({u(e), u(e), u(e), 1});
+    #else
+    std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
     std::vector<Particle> p; for(auto x : g) p.push_back({x.x, x.y, x.z, x.BulgeMass + x.StellarMass});
-    std::vector<double> xi_theta;
+    #endif
+    std::vector<double> xi_theta, theta;
+    for(int i = 1; i < NUMTEST+1; ++i){
+        theta.push_back(acos(1-static_cast<double>(i)/NUMTEST));
+    }
 
     auto s = sfc(p);
     auto sc = sfc_r2c(s);
     force_kernel_type(3);
-    for(int i = 0; i < NUMTEST; ++i)
-    {
-        auto w = wfc(Radius, acos(static_cast<double>(i)/NUMTEST));//static_cast<double>(i)/NUMTEST*M_PI/2
+    for(int i = 0; i < NUMTEST; ++i){
+        auto w = wfc(Radius, theta[i]);
         auto c = convol_c2r(sc, w);
         xi_theta.push_back(inner_product(s, c, GridNum)*GridNum/pow(p.size(), 2) - 1);
         delete[] c;
@@ -26,7 +37,8 @@ int main()
     // print out result:
     double sum{0};
     for(auto x : xi_theta) sum += x;
-    for(auto x : xi_theta) std::cout << x << ", ";
-    std::cout << std::endl << "ave: " << sum/xi_theta.size() << "\n";
+    for(auto x : theta) std::cout << 2*x/M_PI << ", "; std::cout << std::endl;
+    for(auto x : xi_theta) std::cout << x << ", "; std::cout << std::endl;
+    std::cout << "ave: " << sum/xi_theta.size() << std::endl;
     std::cout << "shell: " << inner_product(s, c, GridNum)*GridNum/pow(p.size(), 2) - 1 << std::endl;
 }

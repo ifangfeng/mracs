@@ -36,7 +36,7 @@ extern std::string DIREC;
 extern std::string RESOL;
 extern std::string RADII;
 extern std::string GENUS;
-extern std::string MilleCata;
+extern std::string DataDirec;
 extern std::vector<double> phi;
 
 // kernel function declared

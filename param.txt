@@ -16,8 +16,8 @@ Radius                          1 % Mpc/h
 DIREC                           .
 
 %---Particle_data
-MilleCata                       /data0/Millennium/croton_etal/croton_etal.ugriz.mini.bin
-SimBoxL                         62.5 % Mpc/h
+DataDirec                       /home/feng/simdata/croton_etal/croton_etal.ugriz.bin
+SimBoxL                         500 % Mpc/h
 
 %---Number_of_threads_used
 Threads                         64

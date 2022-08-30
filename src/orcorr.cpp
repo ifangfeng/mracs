@@ -8,7 +8,7 @@
 int main()
 {
     read_parameter();
-    std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(MilleCata);
+    std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
     std::vector<Particle> p;
     for(Galaxy i : g) p.push_back({i.x, i.y, i.z, i.BulgeMass+i.StellarMass});
 

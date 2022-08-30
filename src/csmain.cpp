@@ -71,10 +71,10 @@ void read_parameter()
             DIREC = temp;
             npri++;
         }
-        else if(itemp == "MilleCata")
+        else if(itemp == "DataDirec")
         {
             iprmfs >> temp;
-            MilleCata = temp;
+            DataDirec = temp;
             npri++;
         }
         else if(itemp == "SimBoxL")
@@ -100,7 +100,7 @@ void read_parameter()
     std::cout << "-> KernelFunc  =  " << KernelFunc << std::endl;
     std::cout << "-> Radius      =  " << Radius << std::endl;
     std::cout << "-> DIREC       =  " << DIREC << std::endl;
-    std::cout << "-> MilleCata   =  " << MilleCata << std::endl;
+    std::cout << "-> DataDirec   =  " << DataDirec << std::endl;
     std::cout << "-> SimBoxL     =  " << SimBoxL << std::endl;
     std::cout << "-> Threads     =  " << Threads << std::endl;
     
@@ -667,7 +667,6 @@ double* convol_c2r(fftw_complex* sc, double* w)
     for(size_t i = 0; i < GridNum; ++i) c[i] /= GridNum;
 
     fftw_free(sc1);
-    delete[] w;
     return c;
 }
 

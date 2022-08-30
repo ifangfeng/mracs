@@ -1,8 +1,8 @@
 #include"csmain.h"
 
 
-std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string MilleCata);
-
+std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string DataDirec);
+std::vector<Particle> read_in_TNG_3vector(std::string DataDirec);
 
 
 //=======================================================================================
@@ -11,9 +11,9 @@ std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string Mill
 //----- Millennium Run galaxy catalog, croton_etal
 //----- https://wwwmpa.mpa-garching.mpg.de/galform/agnpaper/
 //---------------------------------------------------------------------------------------
-std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string MilleCata)
+std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string DataDirec)
 {
-    std::string ipfname {MilleCata};
+    std::string ipfname {DataDirec};
     std::ifstream ifs {ipfname, std::ios_base::binary};
     if(!ifs) 
     {   
@@ -119,3 +119,27 @@ std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string Mill
     return p;
 }
 
+// read in TNG dumped velocities or coordinates data
+std::vector<Particle> read_in_TNG_3vector(std::string DataDirec){
+    std::string ipfname {DataDirec};
+    std::ifstream ifs {ipfname, std::ios_base::binary};
+    if(!ifs){   
+        std::cout << "!Reading " + ipfname + " with error..." << std::endl;
+        std::terminate();
+    }
+    std::chrono::steady_clock::time_point begin0, end0;
+    std::cout << "Reading binary file..." << std::endl;
+    begin0 = std::chrono::steady_clock::now();
+    std::vector<Particle> p;
+    double a[3];
+    void* addr = a;
+    while(ifs.read(static_cast<char*>(addr), 3*sizeof(double)));
+
+    end0 = std::chrono::steady_clock::now();
+
+    std::cout << "Time difference 0 Read_in  = " 
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end0 - begin0).count()
+    << "[ms]" << std::endl;
+    p.push_back({a[0],a[1],a[2],1.});
+    return p;
+}
