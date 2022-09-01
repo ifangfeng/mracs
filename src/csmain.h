@@ -145,7 +145,7 @@ double* Spectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* PowerPhiFunc(const size_t N);
 double* wfc(const double Radius, const double theta);
-double* half_convol(double* s, double* w);
+double* convol3d(double* s, double* w);
 double* convol_c2r(fftw_complex* sc, double* w);
 fftw_complex* sfc_r2c(double* s);
 double array_sum(double* w, size_t N);

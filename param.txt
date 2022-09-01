@@ -2,7 +2,7 @@
 Resolution                      9
 
 %---Base_Function_Type
-BaseType                        0 % _0_:_BSpline_1_:_Daubechies
+BaseType                        0 % _0_BSpline,_1_Daubechies
 
 %---Wavelet_phi_Genus
 phiGenus                        1
@@ -10,13 +10,13 @@ SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian_3_:_Ring
-Radius                          1 % Mpc/h
+Radius                          5 % Mpc/h
 
 %---Main_Directory
 DIREC                           .
 
 %---Particle_data
-DataDirec                       /home/feng/simdata/croton_etal/croton_etal.ugriz.bin
+DataDirec                       /data0/Millennium/croton_etal/croton_etal.ugriz.bin
 SimBoxL                         500 % Mpc/h
 
 %---Number_of_threads_used

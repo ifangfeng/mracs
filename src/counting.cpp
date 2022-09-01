@@ -25,7 +25,7 @@ int main()
 
     auto s = sfc(p);
     auto w = wfc(Radius, 0);
-    auto c = half_convol(s, w);
+    auto c = convol3d(s, w);
 
     std::default_random_engine e;
     std::uniform_real_distribution<double> u(0, SimBoxL);

@@ -2,9 +2,21 @@
 
 using namespace std;
 
+
+
+
+int main(){
+    for(int i = 0; i < 100; ++i)
+    {
+        std::cout<< i/100. <<", ";
+    }
+    std::cout << "\n";
+}
+/*
 int main(){
     read_parameter();
     auto g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
+    cout << g.size() << endl;
     std::cout << "before:" << std::endl;
     for(int i = 0; i < 10; ++i){
         std::cout << g[i].x << ", " << g[i].y << ", " << g[i].z << ", " << g[i].vx << ", " << g[i].vy << ", " << g[i].vz << ", " << g[i].BulgeMass <<"\n";
@@ -27,7 +39,7 @@ int main(){
     //    d.push_back(a.Mag_r);d.push_back(a.Mag_i);d.push_back(a.Mag_z);d.push_back(a.BulgeMag_u);d.push_back(a.BulgeMag_g);d.push_back(a.BulgeMag_r);d.push_back(a.BulgeMag_i);d.push_back(a.BulgeMag_z);
     //    d.push_back(a.StellarMass);d.push_back(a.BulgeMass);d.push_back(a.ColdGas);d.push_back(a.HotGas);d.push_back(a.EjectedMass);d.push_back(a.BlackHoleMass);d.push_back(a.Sfr);
     //    }
-    
+    /*
     std::string ofname = "../simdata/croton_etal.ugriz.rsd.bin";
     std::ofstream ofs(ofname, std::ios_base::binary);
     if(!ofs){
@@ -44,9 +56,9 @@ int main(){
         for(int n = 0; n < g.size(); ++n)
             for(int j = 3; j >= 0; --j)
                 ofs.write(((char*) addr) + (i + n*23)*4 +j , sizeof(char));
-    }
+    }*/
 
-}
+}*/
 
 
 /*

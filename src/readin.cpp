@@ -85,7 +85,7 @@ std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string Data
         Galaxy x;
         int L = x.size();                           // number of parameter of each Galaxy
         float* a = new float[Total * L];
-
+        
         for(int i = 0; i < L; ++i)
             for(int j = 0; j < Total; ++j)
                 {

@@ -1,7 +1,7 @@
 #include"mracs.h"
 
 #define RANDOM
-#define NUMRAN 18960
+#define NUMRAN 9474168
 #define NUMTEST 100
 
 int main()
@@ -18,7 +18,8 @@ int main()
     #endif
     std::vector<double> xi_theta, theta;
     for(int i = 1; i < NUMTEST+1; ++i){
-        theta.push_back(acos(1-static_cast<double>(i)/NUMTEST));
+        // theta.push_back(acos(1-static_cast<double>(i)/NUMTEST));
+        theta.push_back(static_cast<double>(i)/NUMTEST);
     }
 
     auto s = sfc(p);
@@ -36,7 +37,8 @@ int main()
     auto c = convol_c2r(sc, w);
     // print out result:
     double sum{0};
-    for(auto x : xi_theta) sum += x;
+    for(auto x : xi_theta) sum += sin(x);
+    for(auto x : xi_theta) sum += sin(x);
     for(auto x : theta) std::cout << 2*x/M_PI << ", "; std::cout << std::endl;
     for(auto x : xi_theta) std::cout << x << ", "; std::cout << std::endl;
     std::cout << "ave: " << sum/xi_theta.size() << std::endl;

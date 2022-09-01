@@ -674,7 +674,7 @@ double* convol_c2r(fftw_complex* sc, double* w)
 // s and w are 3d Real array, s in physical space while w in frequency space, return 
 // as double* c , convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J
 //=======================================================================================
-double* half_convol(double* s, double* w)
+double* convol3d(double* s, double* w)
 {
     auto begin3 = std::chrono::steady_clock::now();
 
