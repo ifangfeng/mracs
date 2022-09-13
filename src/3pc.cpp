@@ -56,7 +56,7 @@ int main(){
         for(int n = 0; n < g.size(); ++n)
             for(int j = 3; j >= 0; --j)
                 ofs.write(((char*) addr) + (i + n*23)*4 +j , sizeof(char));
-    }*/
+    }
 
 }*/
 
