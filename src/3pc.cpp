@@ -6,11 +6,8 @@ using namespace std;
 
 
 int main(){
-    for(int i = 0; i < 100; ++i)
-    {
-        std::cout<< i/100. <<", ";
-    }
-    std::cout << "\n";
+    double x = -3.14;
+    cout << fmod(x+9, 9) << endl;
 }
 /*
 int main(){

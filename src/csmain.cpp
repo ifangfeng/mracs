@@ -415,6 +415,43 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
     return p;
 }
 
+// from sfc to density power 
+double* densityPowerSpectrum(double* s)
+{
+    auto sc = sfc_r2c(s);
+    double* P_k = new double[GridNum];
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k)
+            {
+                P_k[i * GridLen * GridLen + j * GridLen + k] = 
+                pow(sc[i * GridLen * GridLen + j * GridLen + k][0], 2) + pow(sc[i * GridLen * GridLen + j * GridLen + k][1], 2);
+            }
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
+            {
+                P_k[i * GridLen * GridLen + j * GridLen + k] = 
+                P_k[(GridLen - i) * GridLen * GridLen + (GridLen - j) * GridLen + GridLen - k];
+            }
+    fftw_free(sc);
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridNum; ++i)
+    {
+        P_k[i] *= PowerPhi[i]; 
+    }
+    return P_k;
+}
+
+
 //=======================================================================================
 // calculate m_th B_Spline dual's power spectrum located in frequency
 // space [k0, k1] with N_k + 1 sampling points, return as array p[]
@@ -461,14 +498,14 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k)
 // power_phi array
 double* PowerPhiFunc(const size_t N)
 {
-    double* PowerSpectral = nullptr;
+    double* PowerSpectra = nullptr;
     if(BaseType == 0)
     {
-        PowerSpectral = B_Spline_Dual_Power_Spectrum(phiGenus, 0, 1, N);
+        PowerSpectra = B_Spline_Dual_Power_Spectrum(phiGenus, 0, 1, N);
     }
     else if (BaseType == 1)
     {
-        PowerSpectral = PowerSpectrum(phi, 0, 1, N);
+        PowerSpectra = PowerSpectrum(phi, 0, 1, N);
     }
 
     auto a = new double[(N+1)*(N+1)*(N+1)];
@@ -480,7 +517,7 @@ double* PowerPhiFunc(const size_t N)
         for(size_t j = 0; j <= N; ++j)
             for(size_t k = 0; k <= N; ++k)
             {
-                a[i * (N+1) * (N+1) + j * (N+1) + k] = PowerSpectral[i] * PowerSpectral[j] * PowerSpectral[k];
+                a[i * (N+1) * (N+1) + j * (N+1) + k] = PowerSpectra[i] * PowerSpectra[j] * PowerSpectra[k];
             }
     return a;
 }
