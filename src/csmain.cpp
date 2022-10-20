@@ -415,11 +415,16 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
     return p;
 }
 
-// from sfc to density power 
-double* densityPowerSpectrum(double* s)
+//=======================================================================================
+// particles first assigned to grid using different window function, then we can take
+// advantage of FFT to get its Fourier Coefficiencs and average all orientation
+// to have P(k) as function of scalar module k, notice that sfc function do the 
+// assignment step exactly
+//=======================================================================================
+double* densityPowerGridFrame(double* s)
 {
     auto sc = sfc_r2c(s);
-    double* P_k = new double[GridNum];
+    double* Pk_array = new double[GridNum];
     #ifdef IN_PARALLEL
     #pragma omp parallel for
     #endif
@@ -427,8 +432,9 @@ double* densityPowerSpectrum(double* s)
         for(size_t j = 0; j < GridLen; ++j)
             for(size_t k = 0; k < GridLen/2 + 1; ++k)
             {
-                P_k[i * GridLen * GridLen + j * GridLen + k] = 
-                pow(sc[i * GridLen * GridLen + j * GridLen + k][0], 2) + pow(sc[i * GridLen * GridLen + j * GridLen + k][1], 2);
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
             }
     #ifdef IN_PARALLEL
     #pragma omp parallel for
@@ -437,18 +443,105 @@ double* densityPowerSpectrum(double* s)
         for(size_t j = 0; j < GridLen; ++j)
             for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
             {
-                P_k[i * GridLen * GridLen + j * GridLen + k] = 
-                P_k[(GridLen - i) * GridLen * GridLen + (GridLen - j) * GridLen + GridLen - k];
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
             }
     fftw_free(sc);
+    
+    int klen = GridLen*sqrt(3.);
+    int nk[klen];
+    double* Pk = new double[klen];
+    for(int i = 0; i < klen; ++i)
+    {   
+        nk[i] = 0;
+        Pk[i] = 0;
+    }
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen; ++k)
+            {
+                int kM = sqrt(i * i + j * j + k * k);
+                Pk[kM] += Pk_array[i * GridLen * GridLen +j * GridLen + k];
+                nk[kM] += 1;
+            }
+    delete[] Pk_array;
+    
+    for(int i = 0; i < klen; ++i)
+    {
+        if(nk[i] != 0)
+        Pk[i] /= nk[i];
+        Pk[i] /= pow(GridNum,2);
+    }
+    
+    return Pk;
+}
+
+
+//=======================================================================================
+// calculate density power spectrum using projected density fileds mathematically
+//=======================================================================================
+double* densityPowerDWT(double* s)
+{
+    auto sc = sfc_r2c(s);
+    double* Pk_array = new double[GridNum];
     #ifdef IN_PARALLEL
     #pragma omp parallel for
     #endif
-    for(size_t i = 0; i < GridNum; ++i)
-    {
-        P_k[i] *= PowerPhi[i]; 
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k)
+            {
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
+            }
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
+            {
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
+            }
+    fftw_free(sc);
+
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen; ++k)
+            {
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] *=
+                PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+            }
+    int klen = GridLen*sqrt(3.);
+    int nk[klen];
+    double* Pk = new double[klen];
+    for(int i = 0; i < klen; ++i)
+    {   
+        nk[i] = 0;
+        Pk[i] = 0;
     }
-    return P_k;
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen; ++k)
+            {
+                int kM = sqrt(i * i + j * j + k * k);
+                Pk[kM] += Pk_array[i * GridLen * GridLen +j * GridLen + k];
+                nk[kM] += 1;
+            }
+    delete[] Pk_array;
+    for(int i = 0; i < klen; ++i)
+    {
+        if(nk[i] != 0)
+        Pk[i] /= nk[i];
+        Pk[i] /= pow(GridNum,2);
+    }
+    
+    return Pk;
 }
 
 
@@ -533,6 +626,34 @@ void force_kernel_type(int x)
         std::cout << "!kernel function has been forced to " << x << "\n";
     }
 
+}
+
+// 'a' specify BaseType while 'n' phiGenus
+void force_base_type(int a, int n)
+{
+    if(a < 0 || a > 1 || n < 0)
+    {
+        std::cout << "!Illegal input, a should be '0' or '1' and n is a non-negative integer" << std::endl;
+    }
+    else if(a != BaseType || n != phiGenus )
+    {
+        BaseType = a;
+        phiGenus = n;
+        std::string BaseType_String = !BaseType ? "B_Spline" : "Daubechies";
+        if(BaseType == 0)
+        {
+            phi = B_Spline(phiGenus, SampRate);
+            phi.push_back(0);
+            phi.push_back(phiGenus + 1);
+        }
+        else if (BaseType == 1)
+        {
+            phi = Daubechies_Phi(phiGenus);
+        }
+        delete[] PowerPhi;
+        PowerPhi = PowerPhiFunc(GridLen);
+        std::cout << "!BaseType has been forced to: " << BaseType_String << n << "\n";
+    }
 }
 
 //=======================================================================================

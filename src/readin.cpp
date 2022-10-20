@@ -133,13 +133,23 @@ std::vector<Particle> read_in_TNG_3vector(std::string DataDirec){
     std::vector<Particle> p;
     double a[3];
     void* addr = a;
-    while(ifs.read(static_cast<char*>(addr), 3*sizeof(double)));
+    // for(int i = 0; i < 30; ++i)
+    // {
+    //     ifs.read(static_cast<char*>(addr), 3*sizeof(double));
+    //     std::cout << "Address of stack variable a[0]: " << addr << " | ";
+    //     std::cout << a[0] << " " << a[1] << " " << a[2] << std::endl;
+    // }
+    while(ifs.read(static_cast<char*>(addr), 3*sizeof(double)))
+        p.push_back({a[0],a[1],a[2],1.});
+
 
     end0 = std::chrono::steady_clock::now();
 
+    std::cout << "---Number of Particles: " << p.size() << std::endl;
+    
     std::cout << "Time difference 0 Read_in  = " 
     << std::chrono::duration_cast<std::chrono::milliseconds>(end0 - begin0).count()
     << "[ms]" << std::endl;
-    p.push_back({a[0],a[1],a[2],1.});
+    //p.push_back({a[0],a[1],a[2],1.});
     return p;
 }

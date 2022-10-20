@@ -3,13 +3,28 @@
 using namespace std;
 
 
-
-
 int main(){
-    double x = -3.14;
-    cout << fmod(x+9, 9) << endl;
+    read_parameter();
+    // std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
+    // std::vector<Particle> p; for(Galaxy i : g) p.push_back({i.x, i.y, i.z, 1.});
+    // std::vector<Galaxy>().swap(g);
+    // auto p = read_in_TNG_3vector(DataDirec);
+    //auto s = sfc(p);
+    //
+    //double* Pk_grid     = densityPowerGridFrame(s);
+    //double* Pk_gridFree = densityPowerDWT(s);
+
+    for(int i = 0; i < GridLen/2+1; ++i) std::cout << i/75.             << ", "; std::cout << '\n' << '\n';
+    // for(int i = 0; i < GridLen/2+1; ++i) std::cout << Pk_grid[i]            << ", "; std::cout << '\n' << '\n';
+    // for(int i = 0; i < GridLen/2+1; ++i) std::cout << Pk_gridFree[i]        << ", "; std::cout << '\n' << '\n';
+    // for(int i = 0; i < GridLen/2+1; ++i) std::cout << Pk_grid[i]*i*i*i      << ", "; std::cout << '\n' << '\n';
+    // for(int i = 0; i < GridLen/2+1; ++i) std::cout << Pk_gridFree[i]*i*i*i  << ", "; std::cout << '\n';
 }
 /*
+    auto p = read_in_TNG_3vector(DataDirec);
+    for(int i = 0; i < 30; ++i) cout << p[i].x << " " << p[i].y << " " << p[i].z << " " << p[i].weight << endl;
+    //for(auto i : p) cout << i.x << " " << i.y << " " << i.z << " " << i.weight << endl;
+    vector<Particle>().swap(p);
 int main(){
     read_parameter();
     auto g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
