@@ -14,6 +14,7 @@ int KernelFunc;                    // window function, 0:shell, 1:sphere, 2:Gaus
 double Radius;                     // window radius R in Mpc/h
 double SimBoxL;                    // simulation box length in Mpc/h
 int Threads;                       // number of threads that used
+//int phiSupport;                    // support of scaling function phi
 uint64_t GridLen;                  // side length of MRA frame, == 2^J
 uint64_t GridNum;                  // number of cubes, == (2^J)^3
 std::string DIREC;

@@ -116,6 +116,7 @@ void read_parameter()
         std::terminate();
     }
 
+
     GridLen = 1 << Resolution;
     GridNum = 1UL << Resolution*3;
 
@@ -859,10 +860,12 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
     const int SampRate   = (phi.size() - 2) / phiSupport;
     const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
 
+    auto begin4 = std::chrono::steady_clock::now();
 
     std::vector<int> step(phiSupport);
     for(int i = 0; i < phiSupport; ++i)
         step[i] = i * SampRate;
+
 
     for(size_t n = 0; n < p0.size(); ++n)
     {
@@ -886,22 +889,13 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
                     sum += s[((xxc-i) & (GridLen-1)) * GridLen * GridLen + ((yyc-j) & (GridLen-1)) * GridLen + ((zzc-k) & (GridLen-1))]
                             * phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
                 }
-
         result.push_back(sum);
-        
     }
 
-    //std::cout << "Check: " << std::endl;
-
-    //double Expect, Calcul{0};
-    //Expect = 4./3. * M_PI * pow((Radius * ScaleFactor), 3) / N * total;
-    //std::cout << "Expectation of convolved Galaxy Numbers: " << Expect << std::endl;
-
-    //for(auto x : result) Calcul += x;
-    //Calcul /= result.size();
-    //std::cout << "Calculation of convolved Galaxy Numbers: " << Calcul << std::endl;
-
-
+    auto end4 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 4 interpret = "
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end4 - begin4).count()
+    << "[ms]" << std::endl;
 }
 
 

@@ -3,8 +3,8 @@
 // (2) density variance with top-hat filter
 #include"mracs.h"
 
-#define R0 500           // Mpc/h
-#define R1 50000.           // Mpc/h
+#define R0 0.5           // Mpc/h
+#define R1 50.           // Mpc/h
 #define NUMTEST 10
 
 int main()

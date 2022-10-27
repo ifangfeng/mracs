@@ -5,19 +5,19 @@ Resolution                      9
 BaseType                        1 % _0_BSpline,_1_Daubechies
 
 %---Wavelet_phi_Genus
-phiGenus                        10
+phiGenus                        4
 SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian_3_:_Ring
-Radius                          5 % Mpc/h
+Radius                          3 % Mpc/h
 
 %---Main_Directory
 DIREC                           .
 
 %---Particle_data
-DataDirec                       /data0/TNG100-1/snap99_DM_Coordinates.bin
-SimBoxL                         75000 % Mpc/h
+DataDirec                       /data0/Millennium/croton_etal/croton_etal.ugriz.rsd.bin
+SimBoxL                         500 % Mpc/h
 
 %---Number_of_threads_used
 Threads                         64
