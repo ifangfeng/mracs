@@ -2,21 +2,21 @@
 Resolution                      9
 
 %---Base_Function_Type
-BaseType                        1 % _0_BSpline,_1_Daubechies
+BaseType                        0 % _0_BSpline,_1_Daubechies
 
 %---Wavelet_phi_Genus
-phiGenus                        10
+phiGenus                        5
 SampRate                        1000
 
 %---Convolution_Kernel
-KernelFunc                      0 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian_3_:_Ring
-Radius                          3 % Mpc/h
+KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian_3_:_Ring
+Radius                          8 % Mpc/h
 
 %---Main_Directory
 DIREC                           .
 
 %---Particle_data
-DataDirec                       /data0/tmp/dm_particles_snap_079_position.bin
+DataDirec                       /data0/BigMDPL/BigMDPL_halo.bin
 SimBoxL                         2500 % Mpc/h
 
 %---Number_of_threads_used

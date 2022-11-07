@@ -10,8 +10,8 @@ int main()
 
     density_power(0,1,p);
     density_power(0,5,p);
-    // density_power(1,4,p);
-    // density_power(1,10,p);
+    density_power(1,4,p);
+    density_power(1,10,p);
 
 }
 

@@ -9,7 +9,7 @@ int main()
     read_parameter();
     
     double scalefactor = SimBoxL/GRIDSIZE;
-    std::vector<Particle> p;
+    //std::vector<Particle> p;
 
     #ifdef UNIFORM
     std::cout << "UNIFORM: " << std::endl;
@@ -19,8 +19,9 @@ int main()
             for(int k = 0; k < GRIDSIZE; ++k)
               p.push_back(Particle{i*scalefactor, j*scalefactor, k*scalefactor, 1.});
     #else
-    auto g   = read_in_Millennium_Run_galaxy_catalog(DataDirec);
-    for(auto i : g) p.push_back(Particle{i.x, i.y, i.z, 1.});
+    //auto g   = read_in_Millennium_Run_galaxy_catalog(DataDirec);
+    //for(auto i : g) p.push_back(Particle{i.x, i.y, i.z, 1.});
+    auto p = read_in_Halo_4vector(DataDirec);
     #endif
 
     auto s = sfc(p);
@@ -40,8 +41,9 @@ int main()
     std::vector<double> projNum;
     std::vector<double> counNum;
 
-    result_interpret(c, p0, projNum);
-    count_in_sphere(Radius, SimBoxL, p, p0, counNum);
+    //result_interpret(c, p0, projNum);
+    projNum = project_value(c,p0);
+    counNum = count_in_sphere(Radius, p, p0);
 
     double temp0{0}, temp1{0};
     for(auto x : counNum) temp0 += x;

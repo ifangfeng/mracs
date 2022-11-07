@@ -899,6 +899,54 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
 }
 
 
+std::vector<double> project_value(const double* s, std::vector<Particle>& p0)
+{
+    const int phiStart   = phi[phi.size() - 2];
+    const int phiEnd     = phi[phi.size() - 1];
+    const int phiSupport = phiEnd - phiStart;
+    const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
+
+    auto begin4 = std::chrono::steady_clock::now();
+
+    std::vector<int> step(phiSupport);
+    for(int i = 0; i < phiSupport; ++i)
+        step[i] = i * SampRate;
+
+    std::vector<double> result(p0.size());
+    double sum {0};
+    #pragma omp parallel for reduction (+:sum)
+    for(size_t n = 0; n < p0.size(); ++n)
+    {
+        double xx = p0[n].x * ScaleFactor;
+        double yy = p0[n].y * ScaleFactor;
+        double zz = p0[n].z * ScaleFactor;
+
+        int xxc = floor(xx), xxf = SampRate * (xx - xxc);      
+        int yyc = floor(yy), yyf = SampRate * (yy - yyc);      
+        int zzc = floor(zz), zzf = SampRate * (zz - zzc);
+
+        for(int i = 0; i < phiSupport; ++i)
+            for(int j = 0; j < phiSupport; ++j)
+                for(int k = 0; k < phiSupport; ++k)
+                {
+                    sum += s[((xxc-i) & (GridLen-1)) * GridLen * GridLen + ((yyc-j) & (GridLen-1)) * GridLen + ((zzc-k) & (GridLen-1))]
+                            * phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
+                }
+
+        result[n] = sum;
+        sum = 0;
+    }
+
+    auto end4 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 4 interpret = "
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end4 - begin4).count()
+    << "[ms]" << std::endl;
+
+    return result;
+}
+
+
+
 //calculate index of box that must be inside the sphere R, and that might be intersect with sphere boundray
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index)
 {
@@ -920,7 +968,7 @@ void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector
 
 
 //particle periodic in box size L, calculate the number of particles in sphere center at p0 with radius R
-void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& result)
+std::vector<double> count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0)
 {
     std::vector<Index> inner_index;
     std::vector<Index> cross_index;
@@ -932,7 +980,7 @@ void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>
     double temp;
 
     #ifdef IN_PARALLEL
-    #pragma omp parallel for private(temp)
+    #pragma omp parallel for reduction(+:temp)
     #endif
 
     for(size_t n = 0; n < p0.size(); ++n)
@@ -950,6 +998,8 @@ void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>
             }
         count[n]= temp + inner_index.size() * p.size();
     }
+
+    std::vector<double> result;
     for(size_t i = 0; i < p0.size(); ++i)
         result.push_back(count[i]);
 
@@ -957,6 +1007,8 @@ void count_in_sphere(const double R, const double SimBoxL, std::vector<Particle>
     std::cout << "Time difference 4 count    = "
     << std::chrono::duration_cast<std::chrono::milliseconds>(end4 - begin4).count()
     << "[ms]" << std::endl;
+
+    return result;
 }
 
 

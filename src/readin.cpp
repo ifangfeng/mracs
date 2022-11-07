@@ -3,6 +3,7 @@
 
 std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string DataDirec);
 std::vector<Particle> read_in_TNG_3vector(std::string DataDirec);
+std::vector<Particle> read_in_Halo_4vector(std::string DataDirec);
 
 
 //=======================================================================================
@@ -142,6 +143,34 @@ std::vector<Particle> read_in_TNG_3vector(std::string DataDirec){
 
     std::cout << "---Number of Particles: " << p.size() << std::endl;
     
+    std::cout << "Time difference 0 Read_in  = " 
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end0 - begin0).count()
+    << "[ms]" << std::endl;
+
+    return p;
+}
+
+// float x, y, z, M_virial 
+std::vector<Particle> read_in_Halo_4vector(std::string DataDirec){
+    std::string ipfname {DataDirec};
+    std::ifstream ifs {ipfname, std::ios_base::binary};
+    if(!ifs){   
+        std::cout << "!Reading " + ipfname + " with error..." << std::endl;
+        std::terminate();
+    }
+    std::chrono::steady_clock::time_point begin0, end0;
+    std::cout << "Reading binary file..." << std::endl;
+    begin0 = std::chrono::steady_clock::now();
+    std::vector<Particle> p;
+    float a[4];
+    void* addr = a;
+
+    while(ifs.read(static_cast<char*>(addr), 4*sizeof(float)))
+        p.push_back({a[0],a[1],a[2],1.});
+
+    end0 = std::chrono::steady_clock::now();
+
+    std::cout << "---Number of Particles: " << p.size() << std::endl;
     std::cout << "Time difference 0 Read_in  = " 
     << std::chrono::duration_cast<std::chrono::milliseconds>(end0 - begin0).count()
     << "[ms]" << std::endl;
