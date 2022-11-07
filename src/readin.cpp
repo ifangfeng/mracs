@@ -166,7 +166,7 @@ std::vector<Particle> read_in_Halo_4vector(std::string DataDirec){
     void* addr = a;
 
     while(ifs.read(static_cast<char*>(addr), 4*sizeof(float)))
-        p.push_back({a[0],a[1],a[2],1.});
+        p.push_back({a[0],a[1],a[2],a[3]});
 
     end0 = std::chrono::steady_clock::now();
 
