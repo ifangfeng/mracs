@@ -1,6 +1,6 @@
 #include"mracs.h"
 
-#define NUMRAN  100000
+#define NUMRAN  1000
 
 int main()
 {
@@ -62,3 +62,4 @@ int main()
     //for(size_t i = 0; i < NUMRAN; ++i) std::cout << cic_dm[i] / exp_dm - 1 << ", "; std::cout << std::endl << "===>halo: " << std::endl;
     //for(size_t i = 0; i < NUMRAN; ++i) std::cout << cic_halo[i] / exp_halo - 1 << ", "; std::cout << std::endl;
 }
+

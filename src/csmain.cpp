@@ -1012,6 +1012,17 @@ std::vector<double> count_in_sphere(const double R, std::vector<Particle>& p, st
 }
 
 
+
+
+
+
+
+
+
+
+
+
+/*
 void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& stupid_result)
 {
     double count[p0.size()];
@@ -1039,19 +1050,6 @@ void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-/*
 void output_result(const double* v, const int J, )
 {
     
