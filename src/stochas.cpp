@@ -44,7 +44,7 @@ int main()
         dth[i] = dth[i] / exp_h - 1;}
     
     const int num_bin {10};
-    const double dtm0 {-1}, dtm1 {4};
+    const double dtm0 {-1}, dtm1 {2};
     const double ddt {(dtm1 - dtm0) / num_bin};
 
     std::vector<unsigned> count(num_bin);
@@ -67,8 +67,8 @@ int main()
         }
     }
 
-    std::cout << "delta_m bin: " << std::endl << "[";
-    for(int i = 0; i < num_bin; ++i) std::cout << dtm0 + ddt << " -_- "; std::cout << dtm1 <<"]" << std::endl;
+    std::cout << "delta_m bin: " << std::endl; for(int i = 0; i <= num_bin; ++i) std::cout << dtm0 + i*ddt << ", "; std::cout << std::endl;
+    std::cout << "count in bin: " << std::endl; for(auto i : count) std::cout << i << ", "; std::cout << std::endl;
     std::cout << "delta_h average: " << std::endl; for(auto i : ave) std::cout << i << ", "; std::cout << std::endl;
     std::cout << "delta_h deviation: " << std::endl; for(auto i : var) std::cout << sqrt(i) << ", "; std::cout << std::endl;
 
