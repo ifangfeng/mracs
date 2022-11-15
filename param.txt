@@ -1,5 +1,5 @@
 %---MRA_Resolution
-Resolution                      10
+Resolution                      9
 
 %---Base_Function_Type
 BaseType                        0 % _0_BSpline,_1_Daubechies
@@ -20,4 +20,4 @@ DataDirec                       /data0/BigMDPL/BigMDPL_halo.bin
 SimBoxL                         2500 % Mpc/h
 
 %---Number_of_threads_used
-Threads                         128
+Threads                         64
