@@ -44,25 +44,37 @@ int main()
         dth[i] = dth[i] / exp_h - 1;}
     
     const int num_bin {10};
-    const double dtm0 {-1};
-    const double dtm1 {4};
-    const double ddt = (dtm1 - dtm0) / num_bin;
+    const double dtm0 {-1}, dtm1 {4};
+    const double ddt {(dtm1 - dtm0) / num_bin};
+
+    std::vector<unsigned> count(num_bin);
+    std::vector<double> ave(num_bin), var(num_bin);
+    for(int i = 0; i < num_bin; ++i) {ave[i] = 0, var[i] = 0, count[i] = 0;}
 
     for(size_t i = 0; i < NUMRAN; ++i){
-        int temp = floor((dtm[i] - dtm0) / ddt);
-        if(temp < num_bin && temp >= 0)
-
+        int index = floor((dtm[i] - dtm0) / ddt);
+        if(index < num_bin && index >= 0){
+            ave[index] += dth[i];
+            var[index] += pow(dth[i],2);
+            ++count[index];
+        }
+    }
+    for(size_t i = 0; i < NUMRAN; ++i){
+        if(count[i]) {
+            ave[i] /= count[i];
+            var[i] /= count[i];
+            var[i] -= pow(ave[i],2);
+        }
     }
 
-    
-    double ave_dm{0}, ave_halo{0};
-    for(size_t i = 0; i < NUMRAN; ++i) {ave_dm += dtm[i]; ave_halo += dth[i];}
-    std::cout << ave_halo / NUMRAN << ", " << ave_dm / NUMRAN << std::endl;
-    std::cout << exp_h << ", " << exp_m << std::endl;
+    std::cout << "delta_m bin: " << std::endl << "[";
+    for(int i = 0; i < num_bin; ++i) std::cout << dtm0 + ddt << " -_- "; std::cout << dtm1 <<"]" << std::endl;
+    std::cout << "delta_h average: " << std::endl; for(auto i : ave) std::cout << i << ", "; std::cout << std::endl;
+    std::cout << "delta_h deviation: " << std::endl; for(auto i : var) std::cout << sqrt(i) << ", "; std::cout << std::endl;
 
     std::cout << "-----------------prj----------------" << std::endl << "===>dm: " << std::endl;
-    for(size_t i = 0; i < NUMRAN; ++i) std::cout << dtm[i] / exp_m - 1 << ", "; std::cout << std::endl << "===>halo: " << std::endl;
-    for(size_t i = 0; i < NUMRAN; ++i) std::cout << dth[i] / exp_h - 1 << ", "; std::cout << std::endl;
+    for(size_t i = 0; i < NUMRAN; ++i) std::cout << dtm[i] << ", "; std::cout << std::endl << "===>halo: " << std::endl;
+    for(size_t i = 0; i < NUMRAN; ++i) std::cout << dth[i] << ", "; std::cout << std::endl;
 
 
 
