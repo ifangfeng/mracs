@@ -9,6 +9,9 @@ build/
 #binary directory
 bin/
 
+#output
+output/
+
 #wavelets files
 wavelets/
 
@@ -23,3 +26,5 @@ orcorr
 sosta
 orcorr
 ps
+cp
+stochas
