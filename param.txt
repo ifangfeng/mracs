@@ -20,4 +20,4 @@ DataDirec                       /data0/BigMDPL/BigMDPL_halo.bin
 SimBoxL                         2500 % Mpc/h
 
 %---Number_of_threads_used
-Threads                         64
+Threads                         128
