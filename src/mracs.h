@@ -4,6 +4,7 @@
 // read_in_simdata fuction declared
 std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string DataDirec);
 std::vector<Particle> read_in_TNG_3vector(std::string DataDirec);
+std::vector<Particle> read_in_dark_matter_3vector(std::string DataDirec);
 std::vector<Particle> read_in_Halo_4vector(std::string DataDirec);
 
 //global variables for MRACS interface
