@@ -7,12 +7,24 @@
 int main()
 {
     read_parameter();
-    std::vector<Particle> p = read_in_TNG_3vector(DataDirec);
-
+    std::vector<Particle> p = read_in_DM_3vector(DataDirec);
+    /*for(int i = 0; i < 10; ++i)
+    {
+        std::cout << p[i].x << ", " << p[i].y << ", " << p[i].z << ", " << p[i].weight << std::endl;
+    }*/
+    int count {0};
+    for(int i = 0; i < p.size(); ++i)
+    {
+        if(p[i].x > 1000 || p[i].x < 0 || p[i].y > 1000 || p[i].y < 0 || p[i].z > 1000 || p[i].z < 0 || p[i].weight != 1.)
+        //std::cout << i << ": "<< p[i].x << ", " << p[i].y << ", " << p[i].z << ", " << p[i].weight << std::endl;
+        count++;
+    }
+    std::cout << count << std::endl;
+    /*
     std::default_random_engine e;
     std::uniform_real_distribution<double> u(0, SimBoxL);
     std::vector<Particle> p0; for(size_t i = 0; i < p.size(); ++i) p0.push_back({u(e), u(e), u(e), p[i].weight});
-
+    
     auto s   = sfc(p);
     auto sc  = sfc_r2c(s);
     auto s0  = sfc(p0);
@@ -63,4 +75,5 @@ int main()
 
     for(auto x : xi_random)  std::cout << x << ", "; std::cout << std::endl;
     for(int i = 0; i < NUMTEST; ++i) std::cout << xi_random[i] * r_log[i] * r_log[i] << ", "; std::cout << "\nxi_random:\n";
+    */
 }

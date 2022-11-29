@@ -1,6 +1,6 @@
 #include"mracs.h"
 
-#define NUMRAN  1000
+#define NUMRAN  5000
 
 int main()
 {
@@ -60,15 +60,15 @@ int main()
     delete[] s2;
     delete[] c2;
     
-    auto dtmcic = count_in_sphere(Radius, p1, p0);
-    auto dthcic = count_in_sphere(Radius, p2, p0);
+    //auto dtmcic = count_in_sphere(Radius, p1, p0);
+    //auto dthcic = count_in_sphere(Radius, p2, p0);
 
 
     for(size_t i = 0; i < NUMRAN; ++i){
         dtm[i]    = dtm[i] / exp_m - 1;
         dth[i]    = dth[i] / exp_h - 1;
-        dtmcic[i] = dtmcic[i] / exp_m - 1;
-        dthcic[i] = dthcic[i] / exp_h - 1;
+        //dtmcic[i] = dtmcic[i] / exp_m - 1;
+        //dthcic[i] = dthcic[i] / exp_h - 1;
     }
 
     
@@ -103,37 +103,37 @@ int main()
         }
     }
 
-    for(size_t i = 0; i < NUMRAN; ++i){
-        int index = floor((dtmcic[i] - dtm0) / ddt);
-        if(index < num_bin && index >= 0){
-            avecic[index] += dthcic[i];
-            varcic[index] += pow(dthcic[i],2);
-            ++countcic[index];
-        }
-    }
-
-    for(size_t i = 0; i < num_bin; ++i){
-        if(countcic[i]) {
-            avecic[i] /= countcic[i];
-            varcic[i] /= countcic[i];
-            varcic[i] -= pow(avecic[i],2);
-        }
-    }
+    //for(size_t i = 0; i < NUMRAN; ++i){
+    //    int index = floor((dtmcic[i] - dtm0) / ddt);
+    //    if(index < num_bin && index >= 0){
+    //        avecic[index] += dthcic[i];
+    //        varcic[index] += pow(dthcic[i],2);
+    //        ++countcic[index];
+    //    }
+    //}
+//
+    //for(size_t i = 0; i < num_bin; ++i){
+    //    if(countcic[i]) {
+    //        avecic[i] /= countcic[i];
+    //        varcic[i] /= countcic[i];
+    //        varcic[i] -= pow(avecic[i],2);
+    //    }
+    //}
 
     std::cout << "centre of bin: " << std::endl; for(auto i : cbin) std::cout << i << ", "; std::cout << std::endl;
     std::cout << "=============prj=============";
     std::cout << "count in bin: " << std::endl; for(auto i : count) std::cout << i << ", "; std::cout << std::endl;
     std::cout << "delta_h: " << std::endl; for(auto i : ave) std::cout << i << ", "; std::cout << std::endl;
     std::cout << "delta_h deviation: " << std::endl; for(auto i : var) std::cout << sqrt(i) << ", "; std::cout << std::endl;
-    std::cout << "=============cic=============";
-    std::cout << "count in bin: " << std::endl; for(auto i : countcic) std::cout << i << ", "; std::cout << std::endl;
-    std::cout << "delta_h: " << std::endl; for(auto i : avecic) std::cout << i << ", "; std::cout << std::endl;
-    std::cout << "delta_h deviation: " << std::endl; for(auto i : varcic) std::cout << sqrt(i) << ", "; std::cout << std::endl;
+    //std::cout << "=============cic=============";
+    //std::cout << "count in bin: " << std::endl; for(auto i : countcic) std::cout << i << ", "; std::cout << std::endl;
+    //std::cout << "delta_h: " << std::endl; for(auto i : avecic) std::cout << i << ", "; std::cout << std::endl;
+    //std::cout << "delta_h deviation: " << std::endl; for(auto i : varcic) std::cout << sqrt(i) << ", "; std::cout << std::endl;
     
     for(size_t i = 0; i < NUMRAN; ++i) ofsm0 << dtm[i] << ", ";
     for(size_t i = 0; i < NUMRAN; ++i) ofsh0 << dth[i] << ", ";
-    for(size_t i = 0; i < NUMRAN; ++i) ofsm1 << dtmcic[i] << ", ";
-    for(size_t i = 0; i < NUMRAN; ++i) ofsh1 << dthcic[i] << ", ";
+    //for(size_t i = 0; i < NUMRAN; ++i) ofsm1 << dtmcic[i] << ", ";
+    //for(size_t i = 0; i < NUMRAN; ++i) ofsh1 << dthcic[i] << ", ";
 
     std::cout << std::endl;
     
