@@ -1,7 +1,7 @@
 #include"mracs.h"
 
-#define NUMTEST_THETA   20
-#define NUMTEST_R       10
+#define NUMTEST_THETA   1
+#define NUMTEST_R       1
 #define R0              1.
 #define R1              51.
 
@@ -10,9 +10,7 @@ double Proj_Value(double xx, double yy, double zz, double* s, std::vector<int> s
 
 int main(){
     read_parameter();
-    std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
-    std::vector<Particle> p; for(Galaxy i : g) p.push_back({i.x, i.y, i.z, 1.});
-    std::vector<Galaxy>().swap(g);
+    std::vector<Particle> p = read_in_TNG_3vector(DataDirec);
 
     std::default_random_engine e;
     std::uniform_real_distribution<double> u(0, 1);
@@ -37,11 +35,11 @@ int main(){
     std::vector<int> step(phiSupport);
     for(int i = 0; i < phiSupport; ++i) step[i] = i * SampRate;
 
-    const int N_Phi_Twins = 7;
+    const int N_Phi_Twins = 2;
     std::vector<double> dr_x(N_Phi_Twins);
     std::vector<double> dr_y(N_Phi_Twins);
 
-    const int P_Sample = 10; 
+    const int P_Sample = 1; 
     const uint64_t N_Sample = P_Sample * GridLen * GridLen;
     const double ratio_v = 4/3.*M_PI*pow(Radius*GridLen/SimBoxL, 3)/GridNum;
     const double norm = pow(p.size()*ratio_v, 3)* N_Sample * N_Phi_Twins;

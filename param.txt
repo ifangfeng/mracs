@@ -16,8 +16,8 @@ Radius                          3 % Mpc/h
 DIREC                           .
 
 %---Particle_data
-DataDirec                       /data0/Millennium/croton_etal/croton_etal.ugriz.rsd.bin
-SimBoxL                         500 % Mpc/h
+DataDirec                       /data0/BigMDPL/dm_particles_snap_079_position.bin
+SimBoxL                         2500 % Mpc/h
 
 %---Number_of_threads_used
 Threads                         128

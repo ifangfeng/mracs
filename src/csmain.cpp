@@ -422,7 +422,7 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
 // to have P(k) as function of scalar module k, notice that sfc function do the 
 // assignment step exactly
 //=======================================================================================
-double* densityPowerGridFrame(double* s)
+double* densityPowerFFT(double* s)
 {
     auto sc = sfc_r2c(s);
     double* Pk_array = new double[GridNum];
@@ -545,6 +545,139 @@ double* densityPowerDWT(double* s)
     return Pk;
 }
 
+//=======================================================================================
+// calculate cross-correlation function c(k) of two density fileds in fourier space,
+// using mass assignment and FFT method. where k is a scalar.
+//=======================================================================================
+double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2)
+{
+    auto cross_array = new double[GridNum][2];
+
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                cross_array[i * GridLen * GridLen + j * GridLen + k][0] = 
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0]+ 
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1];
+                cross_array[i * GridLen * GridLen + j * GridLen + k][1] = 
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0]-
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1];
+            }
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = GridLen/2 + 1; k < GridLen; ++k){
+                cross_array[i * GridLen * GridLen + j * GridLen + k][0] = 
+                cross_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k][0];
+                cross_array[i * GridLen * GridLen + j * GridLen + k][1] = 
+                cross_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k][1];
+            }
+    int klen = GridLen*sqrt(3.);
+    int nk[klen];
+    auto ccf = new double[klen];
+    for(int i = 0; i < klen; ++i)
+    {   
+        nk[i] = 0;
+        ccf[i] = 0;
+    }
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen; ++k){
+                int kM = sqrt(i * i + j * j + k * k);
+                ccf[kM] += sqrt(pow(cross_array[i * GridLen * GridLen + j * GridLen + k][0],2)+ 
+                                pow(cross_array[i * GridLen * GridLen + j * GridLen + k][1],2));
+                nk[kM] += 1;
+            }
+    delete[] cross_array;
+    for(int i = 0; i < klen; ++i)
+    {
+        if(nk[i] != 0)
+        ccf[i] /= nk[i];
+        ccf[i] /= pow(GridNum,2);
+    }
+    
+    return ccf;
+}
+
+
+//=======================================================================================
+// calculate cross-correlation function c(k) of two density fileds in fourier space,
+// using projected density fileds mathematically, where k is a scalar.
+//=======================================================================================
+double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2)
+{
+    auto cross_array = new double[GridNum][2];
+
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                cross_array[i * GridLen * GridLen + j * GridLen + k][0] = 
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0]+ 
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1];
+                cross_array[i * GridLen * GridLen + j * GridLen + k][1] = 
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0]-
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1];
+            }
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = GridLen/2 + 1; k < GridLen; ++k){
+                cross_array[i * GridLen * GridLen + j * GridLen + k][0] = 
+                cross_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k][0];
+                cross_array[i * GridLen * GridLen + j * GridLen + k][1] = 
+                cross_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k][1];
+            }
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen; ++k){
+                cross_array[i * GridLen * GridLen + j * GridLen + k][0] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+                cross_array[i * GridLen * GridLen + j * GridLen + k][1] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+            }
+    int klen = GridLen*sqrt(3.);
+    int nk[klen];
+    auto ccf = new double[klen];
+    for(int i = 0; i < klen; ++i)
+    {   
+        nk[i] = 0;
+        ccf[i] = 0;
+    }
+    #ifdef IN_PARALLEL
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen; ++k){
+                int kM = sqrt(i * i + j * j + k * k);
+                ccf[kM] += sqrt(pow(cross_array[i * GridLen * GridLen + j * GridLen + k][0],2)+ 
+                                pow(cross_array[i * GridLen * GridLen + j * GridLen + k][1],2));
+                nk[kM] += 1;
+            }
+    delete[] cross_array;
+    for(int i = 0; i < klen; ++i)
+    {
+        if(nk[i] != 0)
+        ccf[i] /= nk[i];
+        ccf[i] /= pow(GridNum,2);
+    }
+    
+    return ccf;
+}
 
 //=======================================================================================
 // calculate m_th B_Spline dual's power spectrum located in frequency
@@ -826,6 +959,22 @@ double* convol_c2r(fftw_complex* sc, double* w)
     for(size_t i = 0; i < GridNum; ++i) c[i] /= GridNum;
 
     fftw_free(sc1);
+    return c;
+}
+
+
+// p[i] = s1[i] * Hermitian[s2[i]]
+fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2)
+{
+    auto c = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
+    {
+        c[i][0] = sc1[i][0] * sc2[i][0] + sc1[i][1] * sc2[i][1];
+        c[i][1] = sc1[i][1] * sc2[i][0] - sc1[i][0] * sc2[i][1];
+    }
+
     return c;
 }
 
