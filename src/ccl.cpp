@@ -4,8 +4,8 @@
 int main()
 {
     read_parameter();
-    auto p1 = read_in_TNG_3vector("/data0/BigMDPL/dm_particles_snap_079_position.bin");
-    auto p20 = read_in_Halo_4vector("/data0/BigMDPL/BigMDPL_halo.bin");
+    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub005.bin");
+    auto p20 = read_in_Halo_4vector("/data0/MDPL2/halo_position.bin");
 
     std::vector<Particle> p2;  
     const double M_min {2e12};

@@ -17,7 +17,7 @@ DIREC                           .
 
 %---Particle_data
 DataDirec                       /data0/BigMDPL/dm_particles_snap_079_position.bin
-SimBoxL                         2500 % Mpc/h
+SimBoxL                         1000 % Mpc/h
 
 %---Number_of_threads_used
 Threads                         128

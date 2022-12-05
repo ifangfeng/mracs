@@ -5,18 +5,14 @@ double* grid_cic(std::vector<Particle>& p, double R, int JCIC);
 int main()
 {
     read_parameter();
-    //auto p10 = read_in_TNG_3vector("/data0/BigMDPL/dm_particles_snap_079_position.bin");
-    auto p20 = read_in_Halo_4vector("/data0/BigMDPL/BigMDPL_halo.bin");
+    auto p1 = read_in_DM_3vector("/data0/MDPL2/halo_position.bin");
+    auto p20 = read_in_Halo_4vector("/data0/MDPL2/dm_sub005.bin");
     
-    std::vector<Particle> p1, p2;  
-
-    //for(size_t i = 0; i < p10.size(); i += 1) p1.push_back({p10[i].x, p10[i].y, p10[i].z, 1.});
-    //std::vector<Particle>().swap(p10);
-    //std::cout << "dm: " << p1.size() << std::endl;
-
+    std::vector<Particle> p2;  
     const double M_min {2e12};
     for(size_t i = 0; i < p20.size(); ++i) if(p20[i].weight > M_min) p2.push_back({p20[i].x, p20[i].y, p20[i].z, 1.});
     std::vector<Particle>().swap(p20);
+    std::cout << "dm: " << p1.size() << std::endl;
     std::cout << "halo: " << p2.size() << std::endl;
     //#################################################
 
