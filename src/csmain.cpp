@@ -750,6 +750,16 @@ double* PowerPhiFunc(const size_t N)
 }
 
 
+void force_resoluton_J(int j)
+{
+    if(Resolution != j){
+        Resolution = j;
+        GridLen = 1 << Resolution;
+        GridNum = 1UL << Resolution*3;
+         std::cout << "!MRACS resolution has been forced to " << j << "\n";
+    }
+}
+
 void force_kernel_type(int x)
 {
     if(x != KernelFunc)

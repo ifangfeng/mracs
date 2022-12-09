@@ -7,10 +7,8 @@ void sub_particle(std::vector<Particle> p, std::vector<Particle> ps);
 void array_merge(double* a, double* b, size_t N);
 double* init_array(size_t N);
 void load_and_clean(std::string ifname, double* s0);
-double Proj_Value(double xx, double yy, double zz, double* s, std::vector<int> step, int phiSupport);
 
-const int phiSupport = phi[phi.size() - 1] - phi[phi.size() - 2];
-std::vector<int> step(phiSupport);
+int64_t npartall{0};
 std::vector<Particle> p1,p2,p3,p4;
 
 
@@ -42,6 +40,7 @@ int main()
                 load_and_clean(fname, s0);}
         }
     }
+    std::cout << "-----> Total number of particles: " << npartall << " = " << pow(npartall, 1./3) << "^3" << std::endl;
     std::vector<Particle> p;
     std::default_random_engine e;
     std::uniform_real_distribution<double> u(0,1);
@@ -49,36 +48,66 @@ int main()
         for(int j = 0; j < 100; ++j)
             for(int k = 0; k < 100; ++k)
                 p.push_back({i + u(e),j + u(e), k + u(e)});
-    auto s1 = sfc(p1);
-    auto s2 = sfc(p2);
-    auto s3 = sfc(p3);
-    auto s4 = sfc(p4);
-    auto w = wfc(Radius,0);
-    auto c0 = convol3d(s0,w);
-    auto c1 = convol3d(s1,w);
-    auto c2 = convol3d(s2,w);
-    auto c3 = convol3d(s3,w);
-    auto c4 = convol3d(s4,w);
-    delete[] s0;
-    delete[] s1;
-    delete[] s2;
-    delete[] s3;
-    delete[] s4;
+
+    auto w  = wfc(Radius,0);
+    auto s1 = sfc(p1);        std::vector<Particle>().swap(p1);
+    auto s2 = sfc(p2);        std::vector<Particle>().swap(p2);
+    auto s3 = sfc(p3);        std::vector<Particle>().swap(p3);
+    auto s4 = sfc(p4);        std::vector<Particle>().swap(p4);
+    auto c0 = convol3d(s0,w); delete[] s0;
+    auto c1 = convol3d(s1,w); delete[] s1;
+    auto c2 = convol3d(s2,w); delete[] s2;
+    auto c3 = convol3d(s3,w); delete[] s3;
+    auto c4 = convol3d(s4,w); delete[] s4;
     delete[] w;
 
-    for(int i = 0; i < phiSupport; ++i) step[i] = i * SampRate;
-
-    const int bin {20};
-    double dens[bin];
-    double sigma[bin];
-    double count_in_bin[bin];
-    for(auto i : p){
-
+    const int nbin {20};
+    const double rhomax {4};
+    const double d_rho = rhomax / nbin;
+    const double cicexpect0 = npartall * 4./3 * M_PI * pow(Radius/SimBoxL, 3);
+    double rho[nbin]; for(int i = 0; i < nbin; ++i) rho[i] = (i + 0.5) * d_rho;
+    double count[nbin]{0};
+    double value[nbin]{0};
+    double sigma[nbin]{0};
+    auto n_prj0 = project_value(c0,p);
+    for(size_t i = 0; i < p.size(); ++i) 
+    {
+        int index = n_prj0[i] / cicexpect0 / d_rho;
+        ++count[index];
+    }
+    for(int i = 0; i < nbin; ++i){
+        value[i] = count[i] / p.size() / d_rho;
+    }
+    const int NJK{100}; // number of Jack knife subsample
+    double c_tmp[nbin]{0};
+    double c_ave[nbin]{0};
+    for(int i = 0; i < NJK; ++i)
+    {
+        for(int j = 0; j < p.size() / NJK; ++j)
+        {
+            int index = n_prj0[i + j * NJK] / cicexpect0 / d_rho;
+            ++c_tmp[index];
+        }
+        for(int i = 0; i < nbin; ++i)
+        {
+            c_tmp[i] /= npartall * d_rho;
+            sigma[i] += pow(c_tmp[i],2);
+            c_ave[i] += c_tmp[i];
+        }
+    }
+    for(int i = 0; i < nbin; ++i)
+    {
+        sigma[i] = sqrt((sigma[i] - c_ave[i]) / (NJK - 1));
     }
 
 
+    auto n_prj1 = project_value(c1,p);
+    auto n_prj2 = project_value(c2,p);
+    auto n_prj3 = project_value(c3,p);
+    auto n_prj4 = project_value(c4,p);
 
 }
+
 
 void load_and_clean(std::string ifname, double* s0)
 {
@@ -131,27 +160,11 @@ std::vector<Particle> snap_push_back(std::string ifname)
     int npart;
     ifs.read(as_bytes(nbyte),sizeof(nbyte));
     npart = nbyte / 4 / 3;
+    npartall += npart;
     float a[3];
     for(int i = 0; i < npart; ++i){
         ifs.read(as_bytes(a),sizeof(a));
         p.push_back({a[0],a[1],a[2],1.});
     }
     return p;
-}
-
-double Proj_Value(double xx, double yy, double zz, double* s, std::vector<int> step, int phiSupport)
-{
-    double sum{0};
-    int xxc = floor(xx), xxf = SampRate * (xx - xxc);      
-    int yyc = floor(yy), yyf = SampRate * (yy - yyc);      
-    int zzc = floor(zz), zzf = SampRate * (zz - zzc);
-    
-    for(int i = 0; i < phiSupport; ++i)
-        for(int j = 0; j < phiSupport; ++j)
-            for(int k = 0; k < phiSupport; ++k)
-            {
-                sum += s[((xxc-i) & (GridLen-1)) * GridLen * GridLen + ((yyc-j) & (GridLen-1)) * GridLen + ((zzc-k) & (GridLen-1))]
-                        * phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
-            }
-    return sum;
 }
