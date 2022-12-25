@@ -227,29 +227,6 @@ std::vector<double> Daubechies_Phi(const int phiGenus)
     return phi;
 }
 
-//=======================================================================================
-//||||||||||||||||||||||| read in B-Spline or Daubechies phi data |||||||||||||||||||||||
-//=======================================================================================
-//---- numerical value of n_th B-Spline or Daubechies scaling function data 
-//---------------------------------------------------------------------------------------
-/*
-std::vector<double> read_in_phi(const int phiGenus)
-{
-    std::vector<double> phi;
-    if(BaseType == 0)
-    {
-        phi = B_Spline(phiGenus, SampRate);
-        phi.push_back(0);
-        phi.push_back(phiGenus + 1);
-    }
-    else if (BaseType == 1)
-    {
-        phi = Daubechies_Phi(phiGenus);
-    }
-    return phi;
-}
-*/
-
 
 //=======================================================================================
 //||||||||||||||| sfc3d (scaling function coefficients of density field) ||||||||||||||||
@@ -756,7 +733,9 @@ void force_resoluton_J(int j)
         Resolution = j;
         GridLen = 1 << Resolution;
         GridNum = 1UL << Resolution*3;
-         std::cout << "!MRACS resolution has been forced to " << j << "\n";
+        delete[] PowerPhi;
+        PowerPhi = PowerPhiFunc(GridLen);
+        std::cout << "!MRACS resolution has been forced to " << j << "\n";
     }
 }
 
@@ -1058,7 +1037,7 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
 }
 
 
-std::vector<double> project_value(const double* s, std::vector<Particle>& p0)
+double* project_value(const double* s, std::vector<Particle>& p0)
 {
     const int phiStart   = phi[phi.size() - 2];
     const int phiEnd     = phi[phi.size() - 1];
@@ -1071,7 +1050,7 @@ std::vector<double> project_value(const double* s, std::vector<Particle>& p0)
     for(int i = 0; i < phiSupport; ++i)
         step[i] = i * SampRate;
 
-    std::vector<double> result(p0.size());
+    auto result = new double[p0.size()];
     double sum {0};
     #pragma omp parallel for reduction (+:sum)
     for(size_t n = 0; n < p0.size(); ++n)
@@ -1127,7 +1106,7 @@ void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector
 
 
 //particle periodic in box size L, calculate the number of particles in sphere center at p0 with radius R
-std::vector<double> count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0)
+double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0)
 {
     std::vector<Index> inner_index;
     std::vector<Index> cross_index;
@@ -1135,7 +1114,7 @@ std::vector<double> count_in_sphere(const double R, std::vector<Particle>& p, st
 
     fill_index_set(R/SimBoxL, inner_index, cross_index);
 
-    double count[p0.size()];
+    auto count = new double[p0.size()];
     double temp;
 
     #ifdef IN_PARALLEL
@@ -1158,16 +1137,12 @@ std::vector<double> count_in_sphere(const double R, std::vector<Particle>& p, st
         count[n]= temp + inner_index.size() * p.size();
     }
 
-    std::vector<double> result;
-    for(size_t i = 0; i < p0.size(); ++i)
-        result.push_back(count[i]);
-
     std::chrono::steady_clock::time_point end4 = std::chrono::steady_clock::now();
     std::cout << "Time difference 4 count    = "
     << std::chrono::duration_cast<std::chrono::milliseconds>(end4 - begin4).count()
     << "[ms]" << std::endl;
 
-    return result;
+    return count;
 }
 
 

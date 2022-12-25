@@ -167,10 +167,8 @@ double inner_product(double* v0, double* v1, size_t N);
 void force_resoluton_J(int j);
 void force_kernel_type(int x);
 void force_base_type(int a, int n);
-std::vector<double> project_value(const double* s, std::vector<Particle>& p0);
+double* project_value(const double* s, std::vector<Particle>& p0);
 void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result);
-void de_duplicate_push_back(std::vector<Index>& index, const int i, const int j, const int k);
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);
-std::vector<double> count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0);
-void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& stupid_result);
+double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0);
 

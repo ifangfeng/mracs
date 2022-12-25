@@ -2,7 +2,9 @@
 #include"mracs.h"
 
 //#define halo
-void pdf(std::vector<Particle> p, std::vector<Particle> p1);
+void pdf(double* c, size_t N);
+void cic_pdf(double* c, size_t N);
+void cic_pdf_all(double* c, size_t N);
 int64_t npartall{0};
 
 int main()
@@ -16,39 +18,48 @@ int main()
     std::vector<Particle>().swap(p10);
     std::cout << "halo: " << p1.size() << std::endl;
     #else 
-    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub005.bin");
+    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
     #endif
 
     npartall = p1.size();
 
     std::vector<Particle> p;
     std::default_random_engine e;
+    /*
     std::uniform_real_distribution<double> u(0,1);
     const int rand = 1000;
     for(int i = 0; i < rand; ++i)
         for(int j = 0; j < rand; ++j)
             for(int k = 0; k < rand; ++k)
                 p.push_back({(i + u(e)) / rand * SimBoxL, (j + u(e)) / rand * SimBoxL, (k + u(e)) / rand * SimBoxL});
+    */
+    std::uniform_real_distribution<double> u(50.1, SimBoxL-50.1);
+    for(int i = 0; i < 1000; ++i) p.push_back({u(e),u(e),u(e),1.});
 
-    std::vector<int> resolvec {7,8,9,10,11};
+    std::vector<int> resolvec {5,6,7,8,9};
     for(auto i : resolvec){
         force_resoluton_J(i);
-        pdf(p,p1);
+        auto s = sfc(p1);
+        auto w = wfc(Radius,0);
+        auto c = convol3d(s,w);
+        delete[] w;
+        delete[] s;
+        auto n_prj = project_value(c,p);
+        pdf(n_prj, p.size());
     }
+
+    auto n_cic = count_in_sphere(Radius,p1,p);
+    pdf(n_cic, p.size());
+
+
+    
 }
 
 
-void pdf(std::vector<Particle> p, std::vector<Particle> p1)
+void pdf(double* c, size_t N)
 {
-    auto s = sfc(p1);
-    auto w = wfc(Radius,0);
-    auto c = convol3d(s,w);
-    delete[] w;
-    delete[] s;
-
-
-    const int nbin {500};
-    const double rhomax {10};
+    const int nbin {168};
+    const double rhomax {5};
     const double rhomin {0};
     const double d_rho = (rhomax - rhomin) / nbin;
     const double cicexpect = npartall * 4./3 * M_PI * pow(Radius/SimBoxL, 3);
@@ -56,41 +67,140 @@ void pdf(std::vector<Particle> p, std::vector<Particle> p1)
     double rho[nbin]; for(int i = 0; i < nbin; ++i) rho[i] = (i + 0.5) * d_rho + rhomin;
     double count[nbin]{0};
     double value[nbin]{0};
-    double sigma[nbin]{0};
-    auto n_prj = project_value(c,p);
-    for(size_t i = 0; i < p.size(); ++i) {
-        int index = (n_prj[i] / cicexpect - rhomin) / d_rho;
+    for(size_t i = 0; i < N; ++i) {
+        int index = (c[i] / cicexpect - rhomin) / d_rho;
         if(index < nbin && index >= 0)
         ++count[index];
     }
     for(int i = 0; i < nbin; ++i){
-        value[i] = count[i] / p.size() / d_rho;
+        value[i] = count[i] / N / d_rho;
     }
-    /*
+    
     const int NJK{100}; // number of Jack knife subsample
-    const uint64_t sublen {p.size() / NJK};
-    double c_tmp[nbin]{0};
-    double c_ave[nbin]{0};
-    for(int i = 0; i < NJK; ++i){
-        for(int n = 0; n < sublen; ++n){
-            int index = n_prj[i + n * NJK] / cicexpect / d_rho;
-            if(index < nbin && index >= 0)
-            ++c_tmp[index];
+    const uint64_t sublen {N / NJK};
+    double count_tmp[nbin]{0};
+    double value_tmp[nbin]{0};
+    double xsquare[nbin]{0};
+    double xbar[nbin]{0};
+    double sigma[nbin]{0};
+    double sigma_percent[nbin]{0};
+    std::cout << sublen << std::endl;
+    for(int n = 0; n < NJK; ++n)
+    {
+        #pragma omp paralle for reduction(+:count_tmp)
+        for(int i = 0; i < N; ++i)
+        {
+            if(i%NJK != n)
+            {
+                int index = (c[i] / cicexpect  - rhomin) / d_rho;
+                if(index < nbin && index >= 0)
+                ++count_tmp[index];
+            }
         }
         for(int j = 0; j < nbin; ++j){
-            c_tmp[j] /= sublen * d_rho;
-            sigma[j] += pow(c_tmp[j], 2);
-            c_ave[j] += c_tmp[j];
-            c_tmp[j] = 0;
+            value_tmp[j] = count_tmp[j] / sublen / d_rho;
+            xsquare[j] += pow(value_tmp[j], 2);
+            xbar[j] += value_tmp[j];
+            count_tmp[j] = 0;
         }
     }
     for(int i = 0; i < nbin; ++i){
-        sigma[i] = sqrt((sigma[i] - c_ave[i]) / (NJK - 1));
+        sigma[i] = sqrt((xsquare[i] - pow(xbar[i],2)/NJK) / (NJK - 1));
+        if(value[i])
+        sigma_percent[i] = 100 * sigma[i] / value[i];
     }
-    */
+    
     std::cout << "========out put========J" << Resolution << std::endl;
     std::cout << "density bin: " << std::endl;  for(int i = 0; i < nbin; ++i) std::cout << rho[i] << ", "; std::cout << std::endl;
     std::cout << "count: " << std::endl;        for(int i = 0; i < nbin; ++i) std::cout << count[i] << ", "; std::cout << std::endl;
     std::cout << "profile: " << std::endl;      for(int i = 0; i < nbin; ++i) std::cout << value[i] << ", "; std::cout << std::endl;
-    //std::cout << "standard deviation: " << '\n';for(int i = 0; i < nbin; ++i) std::cout << sigma[i] << ", "; std::cout << std::endl;
+    std::cout << "sigma:: " << std::endl;       for(int i = 0; i < nbin; ++i) std::cout << sigma[i] << ", "; std::cout << std::endl;
+    std::cout << "sigma percent: " << std::endl;for(int i = 0; i < nbin; ++i) std::cout << sigma_percent[i] << ", "; std::cout << std::endl;
+}
+
+void cic_pdf(double* c, size_t N)
+{
+    const double rhomax {5};
+    const double rhomin {0};
+    const double cicexpect = npartall * 4./3 * M_PI * pow(Radius/SimBoxL, 3);
+    const double d_rho = 1./cicexpect;
+    const int nbin = (rhomax - rhomin) / d_rho + 1;
+
+    std::cout << "cic expectation: " << cicexpect << std::endl;
+    std::cout << "number of bin: " << nbin << std::endl;
+    double rho[nbin]; for(int i = 0; i < nbin; ++i) rho[i] = i * d_rho + rhomin;
+    double count[nbin]{0};
+    double value[nbin]{0};
+    for(size_t i = 0; i < N; ++i) {
+        int index = static_cast<int>(c[i]);
+        if(index < nbin && index >= 0)
+        ++count[index];
+    }
+    for(int i = 0; i < nbin; ++i){
+        value[i] = count[i] / N / d_rho;
+    }
+    
+    const int NJK{100}; // number of Jack knife subsample
+    const uint64_t sublen {N / NJK};
+    double count_tmp[nbin]{0};
+    double value_tmp[nbin]{0};
+    double xsquare[nbin]{0};
+    double xbar[nbin]{0};
+    double sigma[nbin]{0};
+    double sigma_percent[nbin]{0};
+    std::cout << sublen << std::endl;
+    for(int n = 0; n < NJK; ++n)
+    {
+        #pragma omp paralle for reduction(+:count_tmp)
+        for(int i = 0; i < N; ++i)
+        {
+            if(i%NJK != n)
+            {
+                int index = static_cast<int>(c[i]);
+                if(index < nbin && index >= 0)
+                ++count_tmp[index];
+            }
+        }
+        for(int j = 0; j < nbin; ++j){
+            value_tmp[j] = count_tmp[j] / sublen / d_rho;
+            xsquare[j] += pow(value_tmp[j], 2);
+            xbar[j] += value_tmp[j];
+            count_tmp[j] = 0;
+        }
+    }
+    for(int i = 0; i < nbin; ++i){
+        sigma[i] = sqrt((xsquare[i] - pow(xbar[i],2)/NJK) / (NJK - 1));
+        if(value[i])
+        sigma_percent[i] = 100 * sigma[i] / value[i];
+    }
+    
+    std::cout << "========out put========cic" << std::endl;
+    std::cout << "density bin: " << std::endl;  for(int i = 0; i < nbin; ++i) std::cout << rho[i] << ", "; std::cout << std::endl;
+    std::cout << "count: " << std::endl;        for(int i = 0; i < nbin; ++i) std::cout << count[i] << ", "; std::cout << std::endl;
+    std::cout << "profile: " << std::endl;      for(int i = 0; i < nbin; ++i) std::cout << value[i] << ", "; std::cout << std::endl;
+    std::cout << "sigma:: " << std::endl;       for(int i = 0; i < nbin; ++i) std::cout << sigma[i] << ", "; std::cout << std::endl;
+    std::cout << "sigma percent: " << std::endl;for(int i = 0; i < nbin; ++i) std::cout << sigma_percent[i] << ", "; std::cout << std::endl;
+}
+
+
+
+
+
+
+void cic_pdf_all(double* c, size_t N){
+    int count [200]{0};
+    double cbin [200];
+    const double cicexpect = npartall * 4./3 * M_PI * pow(Radius/SimBoxL, 3);
+    for(int i = 0; i < 200; ++i)
+    {
+        cbin[i] = i/cicexpect;
+    }
+    for(int n = 0; n < N; ++n)
+    {
+        ++count[static_cast<int>(c[n])];
+    }
+    std::cout << "density bin: " << std::endl;  for(int i = 0; i < 200; ++i) std::cout << cbin[i] << ", "; std::cout << std::endl;
+    std::cout << "count: " << std::endl;        for(int i = 0; i < 200; ++i) std::cout << count[i] << ", "; std::cout << std::endl;
+    
+
 }
