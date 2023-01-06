@@ -113,11 +113,11 @@ struct Index
     int k;
 };
 
-struct Point
+template<class T> struct Point
 {
-    double x;
-    double y;
-    double z;
+    T x;
+    T y;
+    T z;
 };
 
 struct Particle

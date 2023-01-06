@@ -10,13 +10,13 @@ SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      1 % Kernel_type,_0_:_Shell_1_:_Sphere_2_:_Gaussian_3_:_Ring
-Radius                          15 % Mpc/h
+Radius                          50 % Mpc/h
 
 %---Main_Directory
 DIREC                           .
 
 %---Particle_data
-DataDirec                       /data0/BigMDPL/dm_particles_snap_079_position.bin
+DataDirec                       /data0/MDPL2/dm_sub/dm_sub5e-5.bin
 SimBoxL                         1000 % Mpc/h
 
 %---Number_of_threads_used
