@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
   // 1.2) range query
   Kdtree::KdNodeVector result;
   std::vector<int64_t> count(p0.size());
+  begin = clock();
   for (size_t i = 0; i < p0.size(); ++i) {
     std::vector<double> test_point(3);
     test_point[0] = p0[i].x;
@@ -80,6 +81,9 @@ int main(int argc, char** argv) {
     tree.range_nearest_neighbors(test_point, Radius, &result);
     count[i] = result.size();
   }
+  end = clock();
+  diff = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "counting time(tree) for " << p0.size() << " random points:\n  " << diff << "s" << endl;
 
   // 2.1 count in sphere
   auto cic = count_in_sphere(Radius, p, p0);
