@@ -1,5 +1,6 @@
 // Probability Distribution Function of [density filed]
 #include"mracs.h"
+#include"kdtree.hpp"
 
 //#define halo
 void pdf(double* c, size_t N);
@@ -18,25 +19,25 @@ int main()
     std::vector<Particle>().swap(p10);
     std::cout << "halo: " << p1.size() << std::endl;
     #else 
-    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
+    auto p1 = read_in_DM_3vector(DataDirec);
     #endif
 
     npartall = p1.size();
 
-    std::vector<Particle> p;
+    std::vector<Particle> p0;
     std::default_random_engine e;
-    /*
     std::uniform_real_distribution<double> u(0,1);
-    const int rand = 1000;
-    for(int i = 0; i < rand; ++i)
-        for(int j = 0; j < rand; ++j)
-            for(int k = 0; k < rand; ++k)
-                p.push_back({(i + u(e)) / rand * SimBoxL, (j + u(e)) / rand * SimBoxL, (k + u(e)) / rand * SimBoxL});
-    */
-    std::uniform_real_distribution<double> u(50.1, SimBoxL-50.1);
-    for(int i = 0; i < 1000; ++i) p.push_back({u(e),u(e),u(e),1.});
+    const int nps = 100;
+    const double safeband = 50;
 
-    std::vector<int> resolvec {5,6,7,8,9};
+    for(int i = 0; i < nps; ++i)
+        for(int j = 0; j < nps; ++j)
+            for(int k = 0; k < nps; ++k)
+                p0.push_back({safeband + (i + u(e)) * (SimBoxL - 2*safeband) / nps,
+                              safeband + (j + u(e)) * (SimBoxL - 2*safeband) / nps,
+                              safeband + (k + u(e)) * (SimBoxL - 2*safeband) / nps});
+
+    std::vector<int> resolvec {5,9};
     for(auto i : resolvec){
         force_resoluton_J(i);
         auto s = sfc(p1);
@@ -44,12 +45,44 @@ int main()
         auto c = convol3d(s,w);
         delete[] w;
         delete[] s;
-        auto n_prj = project_value(c,p);
-        pdf(n_prj, p.size());
+        auto n_prj = project_value(c,p0);
+        pdf(n_prj, p0.size());
     }
 
-    auto n_cic = count_in_sphere(Radius,p1,p);
-    pdf(n_cic, p.size());
+    // construction of kd-tree
+    Kdtree::KdNodeVector nodes;
+    double diff;
+    clock_t begin, end;
+    for (size_t i = 0; i < p1.size(); ++i) {
+      std::vector<double> point(3);
+      point[0] = p1[i].x;
+      point[1] = p1[i].y;
+      point[2] = p1[i].z;
+      nodes.push_back(Kdtree::KdNode(point));
+    }
+    begin = clock();
+    Kdtree::KdTree tree(&nodes);
+    end = clock();
+    diff = double(end - begin) / CLOCKS_PER_SEC;
+    std::cout << "Creation time for " << p1.size() << " galaxy points:  " << diff << "s" << std::endl;
+
+    // 1.2) range query
+    Kdtree::KdNodeVector result;
+    auto n_cic = new double[p0.size()];
+    begin = clock();
+    for (size_t i = 0; i < p0.size(); ++i) {
+      std::vector<double> test_point(3);
+      test_point[0] = p0[i].x;
+      test_point[1] = p0[i].y;
+      test_point[2] = p0[i].z;
+      tree.range_nearest_neighbors(test_point, Radius, &result);
+      n_cic[i] = result.size();
+    }
+    end = clock();
+    diff = double(end - begin) / CLOCKS_PER_SEC;
+    std::cout << "counting time(tree) for " << p0.size() << " random points:  " << diff << "s" << std::endl;
+
+    pdf(n_cic, p0.size());
 
 
     

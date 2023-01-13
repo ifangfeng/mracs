@@ -80,11 +80,7 @@ int main()
             sub2_p1_cic[i] += sub2_cictmp[0]; sub2_p2_cic[i] += sub2_cictmp[1]; sub2_p3_cic[i] += sub2_cictmp[2];
             sub3_p1_cic[i] += sub3_cictmp[0]; sub3_p2_cic[i] += sub3_cictmp[1]; sub3_p3_cic[i] += sub3_cictmp[2];
             sub4_p1_cic[i] += sub4_cictmp[0]; sub4_p2_cic[i] += sub4_cictmp[1]; sub4_p3_cic[i] += sub4_cictmp[2];
-            std::vector<double>().swap(sub0_cictmp);
-            std::vector<double>().swap(sub1_cictmp);
-            std::vector<double>().swap(sub2_cictmp);
-            std::vector<double>().swap(sub3_cictmp);
-            std::vector<double>().swap(sub4_cictmp);}
+}
 
         std::cout << "=========>Finshed snap_130." << i << std::endl;
     }

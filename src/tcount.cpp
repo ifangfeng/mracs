@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   std::vector<Particle> p0;
   std::default_random_engine e;
   std::uniform_real_distribution<double> u(0,1);
-  const int nps = 2;
+  const int nps = 10;
   const double safeband = 50;
 
   begin = clock();
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
                             safeband + (k + u(e)) * (SimBoxL - 2*safeband) / nps});
   end = clock();
   diff = double(end - begin) / CLOCKS_PER_SEC;
-  cout << "generating time for " << p0.size() << " random points:\n  " << diff << "s" << endl;
+  cout << "generating time for " << p0.size() << " random points:  " << diff << "s" << endl;
 
 
   // 1.1) construction of kd-tree
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
   Kdtree::KdTree tree(&nodes);
   end = clock();
   diff = double(end - begin) / CLOCKS_PER_SEC;
-  cout << "Creation time for " << p.size() << " galaxy points:\n  " << diff << "s" << endl;
+  cout << "Creation time for " << p.size() << " galaxy points:  " << diff << "s" << endl;
 
   // 1.2) range query
   Kdtree::KdNodeVector result;
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
   }
   end = clock();
   diff = double(end - begin) / CLOCKS_PER_SEC;
-  cout << "counting time(tree) for " << p0.size() << " random points:\n  " << diff << "s" << endl;
+  cout << "counting time(tree) for " << p0.size() << " random points:  " << diff << "s" << endl;
 
   // 2.1 count in sphere
   auto cic = count_in_sphere(Radius, p, p0);
