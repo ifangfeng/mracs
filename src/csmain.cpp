@@ -951,6 +951,110 @@ double* convol_c2r(fftw_complex* sc, double* w)
     return c;
 }
 
+char* tidal_tensor(fftw_complex* sc, double* w)
+{
+    auto sc0 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+    auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+    auto cxx = new double[GridNum];
+    auto cxy = new double[GridNum];
+    auto cxz = new double[GridNum];
+    auto cyy = new double[GridNum];
+    auto cyz = new double[GridNum];
+    auto czz = new double[GridNum];
+    
+    fftw_plan plxx = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx, FFTW_MEASURE);
+    fftw_plan plxy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxy, FFTW_MEASURE);
+    fftw_plan plxz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxz, FFTW_MEASURE);
+    fftw_plan plyy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cyy, FFTW_MEASURE);
+    fftw_plan plyz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cyz, FFTW_MEASURE);
+    fftw_plan plzz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, czz, FFTW_MEASURE);
+    
+    
+
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
+    {
+        sc0[i][0] = w[i] * sc[i][0];
+        sc0[i][1] = w[i] * sc[i][1]; 
+    }
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * i / (i*i + j*j + k*k);
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * i / (i*i + j*j + k*k); 
+            }
+    fftw_execute(plxx);
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * j / (i*i + j*j + k*k);
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * j / (i*i + j*j + k*k); 
+            }
+    fftw_execute(plxy);
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * k / (i*i + j*j + k*k);
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * k / (i*i + j*j + k*k); 
+            }
+    fftw_execute(plxz);
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * j * j / (i*i + j*j + k*k);
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = j * j / (i*i + j*j + k*k); 
+            }
+    fftw_execute(plyy);
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * j * k / (i*i + j*j + k*k);
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = j * k / (i*i + j*j + k*k); 
+            }
+    fftw_execute(plyz);
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * k * k / (i*i + j*j + k*k);
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = k * k / (i*i + j*j + k*k); 
+            }
+    fftw_execute(plzz);
+    
+    auto c = new char[GridNum];
+
+    for(size_t i = 0; i < GridNum; ++i)
+    {
+
+    }
+    
+    
+}
+
+void solve_and_classify()
+
+double gaussian_radius_from_mass(double m_smooth) 
+{
+    return 1. / sqrt(TWOPI) * pow(m_smooth, 1./3); // rho_bar is needed: [m_smooth / rho_ar]
+}
 
 // p[i] = s1[i] * Hermitian[s2[i]]
 fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2)
@@ -1145,7 +1249,11 @@ double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Pa
     return count;
 }
 
-
+// enviriamental parameter array locate in gride point, defined as the number of positive eigenvalue
+// of tidle tensor of matter density fileds, which is obtand by Cloud-in-Cell interpolation of particles
+// to grid point and then smoothed by a Gaussian kernel with radius R. The main process is working on 
+// fourier space so we can take advantage of FFT, for detials see Hahn O., Porciani C., Carollo C. M., Dekel A., 2007, MNRAS, 375, 489
+// https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..489H
 
 
 
