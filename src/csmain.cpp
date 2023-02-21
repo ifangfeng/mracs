@@ -955,22 +955,17 @@ char* tidal_tensor(fftw_complex* sc, double* w)
 {
     auto sc0 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
-    auto cxx = new double[GridNum];
-    auto cxy = new double[GridNum];
-    auto cxz = new double[GridNum];
-    auto cyy = new double[GridNum];
-    auto cyz = new double[GridNum];
-    auto czz = new double[GridNum];
-    
-    fftw_plan plxx = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx, FFTW_MEASURE);
-    fftw_plan plxy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxy, FFTW_MEASURE);
-    fftw_plan plxz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxz, FFTW_MEASURE);
-    fftw_plan plyy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cyy, FFTW_MEASURE);
-    fftw_plan plyz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cyz, FFTW_MEASURE);
-    fftw_plan plzz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, czz, FFTW_MEASURE);
-    
-    
-
+    double* cxx[3][3] = {nullptr};
+    for(int xi = 0; xi < 3; ++xi)
+        for(int xj =0; xj < 3; ++xj){
+            cxx[xi][xj] = new double[GridNum];
+        }
+    fftw_plan plxx = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[0][0], FFTW_MEASURE);
+    fftw_plan plxy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[0][1], FFTW_MEASURE);
+    fftw_plan plxz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[0][2], FFTW_MEASURE);
+    fftw_plan plyy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[1][1], FFTW_MEASURE);
+    fftw_plan plyz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[1][2], FFTW_MEASURE);
+    fftw_plan plzz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[2][2], FFTW_MEASURE);
 
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
@@ -1046,10 +1041,43 @@ char* tidal_tensor(fftw_complex* sc, double* w)
 
     }
     
-    
+    return nullptr;
 }
 
-void solve_and_classify()
+
+// void solving_and_classifying(double* a[3][3], char* cptr, size_t N)
+// {
+//     for(size_t i = 0; i < N; ++i)
+//     {
+//         double lambda0,lambda1,lambda2;
+//         a[0][0][i],a[0][0][i],a[0][0][i],a[0][0][i],a[0][0][i],a[0][0][i],
+//     }
+// }
+// solving a 3x3 real symmetric matrix and return the number of eigenvalue above a threshold Lambda_th=0
+int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz)
+{
+    int n = 0;
+    double lambda_th = 0;
+    double t = xx + yy + zz;
+    double mid1 = 2 * xx - yy - zz;
+    double mid2 = 2 * yy - xx - zz;
+    double mid3 = 2 * zz - xx - yy;
+    double a = xx * xx + yy * yy + zz * zz - xx * yy - xx * zz - yy * zz + 3 * (xy * xy + xz * xz + yz * yz);
+    double b = 9 * (mid1 * yz * yz + mid2 * xz * xz + mid3 * xy * xy) - 54 * xy * xz * yz - mid1 * mid2 * mid3;
+    double phi = M_PI / 6;
+    if(b > 0)
+        phi = atan(sqrt(4*a*a*a - b*b) / b) / 3.;
+    else if(b < 0)
+        phi = (atan(sqrt(4*a*a*a - b*b) / b) + M_PI) / 3.;
+    double lambda[3];
+    lambda[0] = (t - 2*sqrt(a)*cos(phi)) / 3;
+    lambda[1] = (t - 2*sqrt(a)*cos(phi + 2*M_PI / 3)) / 3;
+    lambda[1] = (t - 2*sqrt(a)*cos(phi - 2*M_PI / 3)) / 3;
+    for(int i = 0; i < 3; ++i)
+        if(lambda[i] > lambda_th)
+            ++n;
+    return n;
+}
 
 double gaussian_radius_from_mass(double m_smooth) 
 {
