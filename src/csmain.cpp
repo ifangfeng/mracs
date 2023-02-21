@@ -739,6 +739,7 @@ void force_resoluton_J(int j)
     }
 }
 
+// 0-Shell; 1-Sphere; 2-Gaussian; 3-DualRing
 void force_kernel_type(int x)
 {
     if(x != KernelFunc)
@@ -751,7 +752,7 @@ void force_kernel_type(int x)
 
 }
 
-// 'a' specify BaseType while 'n' phiGenus
+// 'a' specify BaseType{0:BSpline,1:DaubWavelet} while 'n' phiGenus
 void force_base_type(int a, int n)
 {
     if(a < 0 || a > 1 || n < 0)
@@ -951,21 +952,24 @@ double* convol_c2r(fftw_complex* sc, double* w)
     return c;
 }
 
-char* tidal_tensor(fftw_complex* sc, double* w)
+// given a Cloud-in-Cell interpreted 3d density array in fourier space, and the Gaussian kernel also in fourier space
+// calculate the soothed density fileds and the Hessian elements of the gravitation potential fileds (df, xx, xy, xz, yy, yz, zz)
+// return as pointer of <double> pointer cxx, with cxx[0] the address of df array, cxx[1] address of xx array and so on.
+double** tidal_tensor(fftw_complex* sc, double* w)
 {
     auto sc0 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
-    double* cxx[3][3] = {nullptr};
-    for(int xi = 0; xi < 3; ++xi)
-        for(int xj =0; xj < 3; ++xj){
-            cxx[xi][xj] = new double[GridNum];
-        }
-    fftw_plan plxx = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[0][0], FFTW_MEASURE);
-    fftw_plan plxy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[0][1], FFTW_MEASURE);
-    fftw_plan plxz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[0][2], FFTW_MEASURE);
-    fftw_plan plyy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[1][1], FFTW_MEASURE);
-    fftw_plan plyz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[1][2], FFTW_MEASURE);
-    fftw_plan plzz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[2][2], FFTW_MEASURE);
+    double** cxx = new double*[7];
+    for(int i = 0; i < 7; ++i){
+        cxx[i] = new double[GridNum];
+    }
+    fftw_plan pldf = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc0, cxx[0], FFTW_MEASURE);
+    fftw_plan plxx = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[1], FFTW_MEASURE);
+    fftw_plan plxy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[2], FFTW_MEASURE);
+    fftw_plan plxz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[3], FFTW_MEASURE);
+    fftw_plan plyy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[4], FFTW_MEASURE);
+    fftw_plan plyz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[5], FFTW_MEASURE);
+    fftw_plan plzz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[6], FFTW_MEASURE);
 
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
@@ -982,6 +986,8 @@ char* tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * i / (i*i + j*j + k*k); 
             }
+    sc1[0][0] = 0;
+    sc1[0][1] = 0;
     fftw_execute(plxx);
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
@@ -992,6 +998,8 @@ char* tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * j / (i*i + j*j + k*k); 
             }
+    sc1[0][0] = 0;
+    sc1[0][1] = 0;
     fftw_execute(plxy);
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
@@ -1002,6 +1010,8 @@ char* tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * k / (i*i + j*j + k*k); 
             }
+    sc1[0][0] = 0;
+    sc1[0][1] = 0;
     fftw_execute(plxz);
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
@@ -1012,6 +1022,8 @@ char* tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = j * j / (i*i + j*j + k*k); 
             }
+    sc1[0][0] = 0;
+    sc1[0][1] = 0;
     fftw_execute(plyy);
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
@@ -1022,6 +1034,8 @@ char* tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = j * k / (i*i + j*j + k*k); 
             }
+    sc1[0][0] = 0;
+    sc1[0][1] = 0;
     fftw_execute(plyz);
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
@@ -1032,27 +1046,24 @@ char* tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = k * k / (i*i + j*j + k*k); 
             }
+    sc1[0][0] = 0;
+    sc1[0][1] = 0;
     fftw_execute(plzz);
+    fftw_execute(pldf);
     
-    auto c = new char[GridNum];
+    fftw_destroy_plan(pldf);
+    fftw_destroy_plan(plxx);
+    fftw_destroy_plan(plxy);
+    fftw_destroy_plan(plxz);
+    fftw_destroy_plan(plyy);
+    fftw_destroy_plan(plyz);
+    fftw_destroy_plan(plzz);
+    fftw_free(sc0);
+    fftw_free(sc1);
 
-    for(size_t i = 0; i < GridNum; ++i)
-    {
-
-    }
-    
-    return nullptr;
+    return cxx;
 }
 
-
-// void solving_and_classifying(double* a[3][3], char* cptr, size_t N)
-// {
-//     for(size_t i = 0; i < N; ++i)
-//     {
-//         double lambda0,lambda1,lambda2;
-//         a[0][0][i],a[0][0][i],a[0][0][i],a[0][0][i],a[0][0][i],a[0][0][i],
-//     }
-// }
 // solving a 3x3 real symmetric matrix and return the number of eigenvalue above a threshold Lambda_th=0
 int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz)
 {
@@ -1066,18 +1077,39 @@ int eigen_classify(double xx, double xy, double xz, double yy, double yz, double
     double b = 9 * (mid1 * yz * yz + mid2 * xz * xz + mid3 * xy * xy) - 54 * xy * xz * yz - mid1 * mid2 * mid3;
     double phi = M_PI / 6;
     if(b > 0)
-        phi = atan(sqrt(4*a*a*a - b*b) / b) / 3.;
+        phi = atan(sqrt(4 * a * a * a - b * b) / b) / 3.;
     else if(b < 0)
-        phi = (atan(sqrt(4*a*a*a - b*b) / b) + M_PI) / 3.;
+        phi = (atan(sqrt(4 * a * a * a - b * b) / b) + M_PI) / 3.;
     double lambda[3];
-    lambda[0] = (t - 2*sqrt(a)*cos(phi)) / 3;
-    lambda[1] = (t - 2*sqrt(a)*cos(phi + 2*M_PI / 3)) / 3;
-    lambda[1] = (t - 2*sqrt(a)*cos(phi - 2*M_PI / 3)) / 3;
+    lambda[0] = (t - 2 * sqrt(a) * cos(phi)) / 3;
+    lambda[1] = (t - 2 * sqrt(a) * cos(phi + 2 * M_PI / 3)) / 3;
+    lambda[2] = (t - 2 * sqrt(a) * cos(phi - 2 * M_PI / 3)) / 3;
     for(int i = 0; i < 3; ++i)
         if(lambda[i] > lambda_th)
             ++n;
     return n;
 }
+
+// from Hessian to web structure: 0-Voids, 1-sheets, 2-filaments, 3-knots
+std::vector<int> web_classify(double** cxx, std::vector<Particle>& p)
+{
+    std::vector<int> s(p.size());
+    for(int i = 0; i < p.size(); ++i)
+    {
+        int xs,ys,zs;   // BSpline have support [0,n+1],not centre in origin
+        int64_t x,y,z,l;   
+        xs = p[i].x / SimBoxL * GridLen + 0.5;
+        ys = p[i].y / SimBoxL * GridLen + 0.5;
+        zs = p[i].z / SimBoxL * GridLen + 0.5;
+        x = (xs - 1) & (GridLen - 1);   // shift -1 for CIC, which is corresponding to BSpline n=1
+        y = (ys - 1) & (GridLen - 1);
+        z = (zs - 1) & (GridLen - 1);
+        l = x * GridLen * GridLen + y * GridLen + z;
+        s[i] = eigen_classify(cxx[1][l], cxx[2][l], cxx[3][l], cxx[4][l], cxx[5][l], cxx[6][l]);
+    }
+    return s;
+}
+
 
 double gaussian_radius_from_mass(double m_smooth) 
 {
