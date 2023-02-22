@@ -984,7 +984,7 @@ double** tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * i / (i*i + j*j + k*k);
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * i / (i*i + j*j + k*k); 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * i * i / (i*i + j*j + k*k); 
             }
     sc1[0][0] = 0;
     sc1[0][1] = 0;
@@ -996,7 +996,7 @@ double** tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * j / (i*i + j*j + k*k);
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * j / (i*i + j*j + k*k); 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * i * j / (i*i + j*j + k*k); 
             }
     sc1[0][0] = 0;
     sc1[0][1] = 0;
@@ -1008,7 +1008,7 @@ double** tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * k / (i*i + j*j + k*k);
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = i * k / (i*i + j*j + k*k); 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * i * k / (i*i + j*j + k*k); 
             }
     sc1[0][0] = 0;
     sc1[0][1] = 0;
@@ -1020,7 +1020,7 @@ double** tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * j * j / (i*i + j*j + k*k);
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = j * j / (i*i + j*j + k*k); 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * j * j / (i*i + j*j + k*k); 
             }
     sc1[0][0] = 0;
     sc1[0][1] = 0;
@@ -1032,7 +1032,7 @@ double** tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * j * k / (i*i + j*j + k*k);
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = j * k / (i*i + j*j + k*k); 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * j * k / (i*i + j*j + k*k); 
             }
     sc1[0][0] = 0;
     sc1[0][1] = 0;
@@ -1044,7 +1044,7 @@ double** tidal_tensor(fftw_complex* sc, double* w)
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
                 sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * k * k / (i*i + j*j + k*k);
                 sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = k * k / (i*i + j*j + k*k); 
+                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * k * k / (i*i + j*j + k*k); 
             }
     sc1[0][0] = 0;
     sc1[0][1] = 0;
@@ -1094,6 +1094,7 @@ int eigen_classify(double xx, double xy, double xz, double yy, double yz, double
 std::vector<int> web_classify(double** cxx, std::vector<Particle>& p)
 {
     std::vector<int> s(p.size());
+    #pragma omp parallel for
     for(int i = 0; i < p.size(); ++i)
     {
         int xs,ys,zs;   // BSpline have support [0,n+1],not centre in origin
