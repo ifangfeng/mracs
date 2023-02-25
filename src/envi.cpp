@@ -1,3 +1,6 @@
+// *******************************************************
+// print halo environment information at its nearst grid point
+// *******************************************************
 #include"mracs.h"
 using namespace std;
 

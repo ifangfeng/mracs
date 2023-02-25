@@ -781,6 +781,85 @@ void force_base_type(int a, int n)
 }
 
 //=======================================================================================
+//||||||||||||||| Fourier transform of window function ||||||||||||||
+//=======================================================================================
+double* wft(const double Radius, const double theta)
+{
+    const double DeltaXi = 1./GridLen;
+    const double rescaleR {Radius * GridLen/SimBoxL};
+
+    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+
+    auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
+    auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
+
+    if(KernelFunc <= 2)
+    {
+        double (*WindowFunction)(double, double, double, double){nullptr};
+
+        if(KernelFunc == 0)      WindowFunction = WindowFunction_Shell;
+        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
+        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
+
+        #pragma omp parallel for
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
+                    WindowFunction(rescaleR, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+                }
+    }
+    else if(KernelFunc == 3)
+    {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * rescaleR * cos(theta) * i*DeltaXi);
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
+                    //WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+                }
+        delete[] fxy;
+    } 
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2+1; ++k)
+            {
+                w[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k]
+                = WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)];
+            }
+
+    std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 2 wft3d    = " 
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()
+    << "[ms]" << std::endl;
+
+    delete[] WindowArray;
+
+    return w;
+}
+
+
+//=======================================================================================
 //||||||||||||||| wfc3d (scaling function coefficients of window function) ||||||||||||||
 //=======================================================================================
 double* wfc(const double Radius, const double theta)

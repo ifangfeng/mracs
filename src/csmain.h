@@ -157,6 +157,7 @@ double* densityPowerDWT(double* s);
 double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2);
 double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2);
 double* PowerPhiFunc(const size_t N);
+double* wft(const double Radius, const double theta);
 double* wfc(const double Radius, const double theta);
 double* convol3d(double* s, double* w);
 double* convol_c2r(fftw_complex* sc, double* w);
