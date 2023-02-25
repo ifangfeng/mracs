@@ -1280,6 +1280,34 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
     << "[ms]" << std::endl;
 }
 
+// projected value at each grid point
+double* prj_grid(const double* s)
+{
+    auto a = new double[GridNum];
+    const int phiStart   = phi[phi.size() - 2];
+    const int phiEnd     = phi[phi.size() - 1];
+    const int phiSupport = phiEnd - phiStart;
+
+    double sum = 0;
+    #pragma omp parallel for reduction (+:sum)
+    for(int x = 0; x < GridLen; ++x)
+        for(int y = 0; y < GridLen; ++y)
+            for(int z = 0; z < GridLen; ++z)
+            {
+                for(int i = 0; i < phiSupport; ++i)
+                    for(int j = 0; j < phiSupport; ++j)
+                        for(int k = 0; k < phiSupport; ++k)
+                        {
+                            sum += s[((x-i) & (GridLen-1)) * GridLen * GridLen + ((y-j) & (GridLen-1)) * GridLen + ((z-k) & (GridLen-1))]
+                                    *phi[i * SampRate] * phi[j * SampRate] * phi[k * SampRate];
+                        }
+                a[x * GridLen * GridLen + y * GridLen + z] = sum;
+                sum = 0;
+            }
+
+    return a;
+}
+
 
 double* project_value(const double* s, std::vector<Particle>& p0)
 {
