@@ -127,12 +127,12 @@ void read_parameter()
     if(BaseType == 0)
     {
         phi = B_Spline(phiGenus, SampRate);
-        phi.push_back(0);
-        phi.push_back(phiGenus + 1);
+        phiSupport = phiGenus + 1;
     }
     else if (BaseType == 1)
     {
         phi = Daubechies_Phi(phiGenus);
+        phiSupport = 2*phiGenus - 1;
     }
 
     PowerPhi = PowerPhiFunc(GridLen);
@@ -194,10 +194,6 @@ std::vector<double> B_Spline(const int n, const int sampleRate)
 //---------------------------------------------------------------------------------------
 std::vector<double> Daubechies_Phi(const int phiGenus)
 {
-    const int phiStart   {0};                     //Wavelet Phi0() has compact support, 
-    const int phiEnd     {2*phiGenus - 1};        //start in x == 0, end in phi_end == 2n-1
-    const int phiSupport {phiEnd - phiStart};     //Wavelet Phi0() has compact support 
-    
     std::vector<int> step(phiSupport);
     for(int i = 0; i < phiSupport; ++i)
         step[i] = i * SampRate;
@@ -217,13 +213,6 @@ std::vector<double> Daubechies_Phi(const int phiGenus)
         phi.push_back(temp);
     }
     
-    phi.push_back(phiStart);
-    phi.push_back(phiEnd);
-
-    //std::cout << "---Daubechies phi genus: " << phiGenus << std::endl;
-    //std::cout << "---Wavelet phi supports: [0," << phiSupport << ") \n";
-    //std::cout << "---Sampling points: " << phi.size() - 2 << std::endl;
-
     return phi;
 }
 
@@ -233,9 +222,6 @@ std::vector<double> Daubechies_Phi(const int phiGenus)
 //=======================================================================================
 double* sfc_offset(std::vector<Particle>& p, Offset v)
 {   
-    const int phiStart   = phi[phi.size() - 2];
-    const int phiEnd     = phi[phi.size() - 1];
-    const int phiSupport = phiEnd - phiStart;
     const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
     
     double total {0};
@@ -252,7 +238,6 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
     }
 
     auto s = new double[GridNum]();         // density field coefficients in v_j space
-    
 
     std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
 
@@ -311,9 +296,9 @@ double* sfc(std::vector<Particle>& p)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 double* Spectrum1(std::vector<double>& v, double k0, double k1, size_t N_k)
 {
-    size_t N_x= v.size()-2;
-    double x0 = v[v.size()-2];
-    double x1 = v[v.size()-1];
+    size_t N_x = v.size();
+    double x0 = 0;
+    double x1 = phiSupport;
     
 
     const double Delta_x {(x1-x0)/N_x};
@@ -344,9 +329,9 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, size_t N_k)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 double* Spectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
 {
-    size_t N_x = v.size()-2;
-    double x0 = v[v.size()-2];
-    double x1 = v[v.size()-1];
+    size_t N_x = v.size();
+    double x0 = 0;
+    double x1 = phiSupport;
     
 
     const double Delta_x {(x1-x0)/N_x};
@@ -767,8 +752,7 @@ void force_base_type(int a, int n)
         if(BaseType == 0)
         {
             phi = B_Spline(phiGenus, SampRate);
-            phi.push_back(0);
-            phi.push_back(phiGenus + 1);
+            phiSupport = phiGenus + 1;
         }
         else if (BaseType == 1)
         {
@@ -1236,10 +1220,6 @@ double* convol3d(double* s, double* w)
 //=======================================================================================
 void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result)
 {
-    const int phiStart   = phi[phi.size() - 2];
-    const int phiEnd     = phi[phi.size() - 1];
-    const int phiSupport = phiEnd - phiStart;
-    const int SampRate   = (phi.size() - 2) / phiSupport;
     const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
 
     auto begin4 = std::chrono::steady_clock::now();
@@ -1284,9 +1264,6 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
 double* prj_grid(const double* s)
 {
     auto a = new double[GridNum];
-    const int phiStart   = phi[phi.size() - 2];
-    const int phiEnd     = phi[phi.size() - 1];
-    const int phiSupport = phiEnd - phiStart;
 
     double sum = 0;
     #pragma omp parallel for reduction (+:sum)
@@ -1311,9 +1288,6 @@ double* prj_grid(const double* s)
 
 double* project_value(const double* s, std::vector<Particle>& p0)
 {
-    const int phiStart   = phi[phi.size() - 2];
-    const int phiEnd     = phi[phi.size() - 1];
-    const int phiSupport = phiEnd - phiStart;
     const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
 
     auto begin4 = std::chrono::steady_clock::now();

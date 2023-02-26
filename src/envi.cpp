@@ -27,7 +27,7 @@ int main(){
     force_kernel_type(2);
     auto s = sfc(dm);
     auto sc = sfc_r2c(s);
-    auto w = wfc(Radius, 0);
+    auto w = wft(Radius, 0);
     auto cxx = tidal_tensor(sc, w);
     auto env = web_classify(cxx,hl);
 

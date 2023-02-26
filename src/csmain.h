@@ -30,7 +30,7 @@ extern int KernelFunc;                    // window function, 0:shell, 1:sphere,
 extern double Radius;                     // window radius R in Mpc/h
 extern double SimBoxL;                    // simulation box length in Mpc/h
 extern int Threads;                       // number of threads that used
-//extern int phiSupport;                    // support of scaling function phi
+extern int phiSupport;                    // support of scaling function phi
 extern uint64_t GridLen;                  // side length of MRA frame, == 2^J
 extern uint64_t GridNum;                  // number of cubes, == (2^J)^3
 extern std::string DIREC;
@@ -175,3 +175,4 @@ double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Pa
 int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz);
 std::vector<int> web_classify(double** cxx, std::vector<Particle>& p);
 double** tidal_tensor(fftw_complex* sc, double* w);
+double* prj_grid(const double* s);
