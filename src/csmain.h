@@ -176,3 +176,5 @@ int eigen_classify(double xx, double xy, double xz, double yy, double yz, double
 std::vector<int> web_classify(double** cxx, std::vector<Particle>& p);
 double** tidal_tensor(fftw_complex* sc, double* w);
 double* prj_grid(const double* s);
+std::vector<Particle> generate_random_particle(int x, double L, double w);
+void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double rhomax, int nbin, std::string ofname);

@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   std::vector<Particle> p0;
   std::default_random_engine e;
   std::uniform_real_distribution<double> u(0,1);
-  const int nps = 10;
+  const int nps = 5;
   const double safeband = 50;
 
   begin = clock();

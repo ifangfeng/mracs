@@ -1399,9 +1399,72 @@ double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Pa
 
 
 
+// x is the number of particles per side, i.e there are x^3 particles in all
+// L is the box size and w is the safe band width, i.e random point locate in (w,L-w)^3
+std::vector<Particle> generate_random_particle(int x, double L, double w)
+{
+    double diff;
+    clock_t begin, end;
 
+    std::vector<Particle> p;
+    std::default_random_engine e;
+    std::uniform_real_distribution<double> u(0,1);
+    const int64_t nps = x;
+    const int64_t NPt = nps * nps * nps;
+    const double boxL = L;
+    const double safeband = w;
 
+    begin = clock();
+    for(int i = 0; i < nps; ++i)
+        for(int j = 0; j < nps; ++j)
+            for(int k = 0; k < nps; ++k)
+                p.push_back({safeband + (i + u(e)) * (boxL - 2*safeband) / nps,
+                              safeband + (j + u(e)) * (boxL - 2*safeband) / nps,
+                              safeband + (k + u(e)) * (boxL - 2*safeband) / nps});
+    end = clock();
+    diff = double(end - begin) / CLOCKS_PER_SEC;
+    std::cout << "generating time for " << p.size() << " random points:  " << diff << "s" << std::endl;
+    
+    return p;
+}
 
+// nf is the normalization factor, i.e sum(sfc)/(2^J)^3 = expectation of projected value
+// e.g. nbin = 100, rhomax = 5, rhomin = 0
+void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double rhomax, int nbin, std::string ofname)
+{
+    std::string ofn = "output/prj_pdf_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
+    std::ofstream ofs{ofn}, ofsbin{"output/xbin.txt"};
+    if(!ofs || !ofsbin){
+        std::cout << "openning file " << ofn << " and output/xbin.txt with error, Abort!" << std::endl;
+        std::terminate();
+    }
+    const double cicexpect = nf;
+    const double d_rho = (rhomax - rhomin) / nbin;
+    std::cout << "cic expectation: " << cicexpect << std::endl;
+    double rho[nbin]; for(int i = 0; i < nbin; ++i) rho[i] = rhomin + (i + 0.5) * d_rho;
+    double count[nbin]{0};
+    double value[nbin]{0};
+    auto n_prj = project_value(c,p0);
+    delete[] c;
+
+    #pragma omp parallel for reduction (+:count)
+    for(size_t i = 0; i < p0.size(); ++i) {
+        int index = (n_prj[i] / cicexpect - rhomin) / d_rho;
+        if(index < nbin && index >= 0)
+        ++count[index];
+    }
+    for(int i = 0; i < nbin; ++i){
+        value[i] = count[i] / p0.size() / d_rho;
+    }
+    for(int i = 0; i < nbin; ++i) ofsbin << rho[i] << ", "; 
+    for(int i = 0; i < nbin; ++i) ofs << value[i] << ", "; 
+    std::cout << "========PDF out put========" << std::endl;
+    std::cout << "density bin: " << std::endl;  for(int i = 0; i < nbin; ++i) std::cout << rho[i] << ", "; std::cout << std::endl;
+    std::cout << "count: " << std::endl;        for(int i = 0; i < nbin; ++i) std::cout << count[i] << ", "; std::cout << std::endl;
+    std::cout << "profile: " << std::endl;      for(int i = 0; i < nbin; ++i) std::cout << value[i] << ", "; std::cout << std::endl;
+    
+    
+}
 
 
 
