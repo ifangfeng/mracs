@@ -3,12 +3,20 @@
 #include"kdtree.hpp"
 using namespace std;
 
+
 int main()
 {
     read_parameter();
-    std::vector<std::string> namestr = {"05", "005", "5e-4", "5e-5", "2halo", "5e-6"};
-    auto p = read_in_DM_3vector(DataDirec);
-    auto p0 = generate_random_particle(10,SimBoxL,50);
+    std::string fname{"dm_sub2halo"};
+    auto p = read_in_DM_3vector("/data0/MDPL2/dm_sub/" + fname + ".bin");
+    // std::string fname{"halo_position"};
+    // auto p1 = read_in_Halo_4vector("/data0/MDPL2/" + fname + ".bin");
+    // std::vector<Particle> p;
+    // for(auto x : p1) if(x.weight > 2e12) p.push_back({x.x,x.y,x.z,x.weight});
+    // std::cout << "number of halo: " << p.size() << std::endl;
+    // std::vector<Particle>().swap(p1);
+
+    auto p0 = generate_random_particle(465,SimBoxL,50);
 
     clock_t begin, end;
     double diff;
@@ -44,6 +52,11 @@ int main()
     end = clock();
     diff = double(end - begin) / CLOCKS_PER_SEC;
     cout << "counting time(tree) for " << p0.size() << " random points:  " << diff << "s" << endl;
+
+    double n = 4./3 * M_PI * pow(Radius/SimBoxL,3) * p.size();
+    cic_pdf(count, 0, 5, n, fname);
+
     
-    return 0;
 }
+
+

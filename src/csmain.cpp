@@ -1433,8 +1433,12 @@ std::vector<Particle> generate_random_particle(int x, double L, double w)
 void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double rhomax, int nbin, std::string ofname)
 {
     std::string ofn = "output/prj_pdf_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
-    std::ofstream ofs{ofn}, ofsbin{"output/xbin.txt"};
-    if(!ofs || !ofsbin){
+    std::string ofn1 = "output/prj_M1th_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
+    std::string ofn2 = "output/prj_M2nd_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
+    std::string ofn3 = "output/prj_M3rd_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
+    std::string ofbn = "output/prj_xbin_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
+    std::ofstream ofs{ofn}, ofsbin{ofbn}, ofs1{ofn1}, ofs2{ofn2}, ofs3{ofn3};
+    if(!ofs || !ofsbin || !ofs1 || !ofs2 || !ofs3){
         std::cout << "openning file " << ofn << " and output/xbin.txt with error, Abort!" << std::endl;
         std::terminate();
     }
@@ -1444,6 +1448,9 @@ void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double 
     double rho[nbin]; for(int i = 0; i < nbin; ++i) rho[i] = rhomin + (i + 0.5) * d_rho;
     double count[nbin]{0};
     double value[nbin]{0};
+    double mmt1[nbin]{0};
+    double mmt2[nbin]{0};
+    double mmt3[nbin]{0};
     auto n_prj = project_value(c,p0);
     delete[] c;
 
@@ -1455,19 +1462,66 @@ void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double 
     }
     for(int i = 0; i < nbin; ++i){
         value[i] = count[i] / p0.size() / d_rho;
+        mmt1[i] = rho[i] * value[i];
+        mmt2[i] = rho[i] * rho[i] * value[i];
+        mmt3[i] = rho[i] * rho[i] * rho[i] * value[i];
     }
-    for(int i = 0; i < nbin; ++i) ofsbin << rho[i] << ", "; 
-    for(int i = 0; i < nbin; ++i) ofs << value[i] << ", "; 
+    for(int i = 0; i < nbin; ++i) ofsbin << rho[i] << ", "; ofsbin.close();
+    for(int i = 0; i < nbin; ++i) ofs << value[i] << ", "; ofs.close();
+    for(int i = 0; i < nbin; ++i) ofs1 << mmt1[i] << ", "; ofs1.close();
+    for(int i = 0; i < nbin; ++i) ofs2 << mmt2[i] << ", "; ofs2.close();
+    for(int i = 0; i < nbin; ++i) ofs3 << mmt3[i] << ", "; ofs3.close();
     std::cout << "========PDF out put========" << std::endl;
     std::cout << "density bin: " << std::endl;  for(int i = 0; i < nbin; ++i) std::cout << rho[i] << ", "; std::cout << std::endl;
     std::cout << "count: " << std::endl;        for(int i = 0; i < nbin; ++i) std::cout << count[i] << ", "; std::cout << std::endl;
-    std::cout << "profile: " << std::endl;      for(int i = 0; i < nbin; ++i) std::cout << value[i] << ", "; std::cout << std::endl;
-    
-    
+    std::cout << "profile: " << std::endl;      for(int i = 0; i < nbin; ++i) std::cout << value[i] << ", "; std::cout << std::endl; 
 }
 
 
+// c is CIC sampling result , other value would be looks like: rhomax = 5, rhomin = 0
+void cic_pdf(std::vector<int64_t>& c, double rhomin, double rhomax, double cicexpect, std::string ofname)
+{
+    std::string ofn = "output/cic_pdf_" + ofname + "_R" + std::to_string((int)Radius) + ".txt";
+    std::string ofbn = "output/cic_xbin_" + ofname + "_R" +  std::to_string((int)Radius) + ".txt";
+    std::string ofn1 = "output/cic_M1th_" + ofname + "_R" + std::to_string((int)Radius) + ".txt";
+    std::string ofn2 = "output/cic_M2nd_" + ofname + "_R" + std::to_string((int)Radius) + ".txt";
+    std::string ofn3 = "output/cic_M3rd_" + ofname + "_R" + std::to_string((int)Radius) + ".txt";
+    std::ofstream ofs{ofn}, ofsbin{ofbn}, ofs1{ofn1}, ofs2{ofn2}, ofs3{ofn3};
+    if(!ofs || !ofsbin || !ofs1 || !ofs2 || !ofs3){
+        std::cout << "openning file " << ofn << " and " << ofbn << " with error, Abort!" << std::endl;
+        std::terminate();
+    }
+    const int nbin = (rhomax - rhomin) * cicexpect + 1;
+    double rho[nbin]; for(int i = 0; i <= nbin; ++i) rho[i] = i / cicexpect;
+    double count[nbin]{0};
+    double value[nbin]{0};
+    double mmt1[nbin]{0};
+    double mmt2[nbin]{0};
+    double mmt3[nbin]{0};
 
+    #pragma omp parallel for reduction (+:count)
+    for(size_t i = 0; i < c.size(); ++i){
+        if(c[i] < nbin)
+            ++count[c[i]];
+    }
+    for(size_t i = 0; i < nbin; ++i){
+        value[i] = count[i] / c.size() * cicexpect; // delta_rho = 1. / cicecpect
+        mmt1[i] = i * count[i] / c.size();
+        mmt2[i] = i * rho[i] * count[i] / c.size();
+        mmt3[i] = i * rho[i] * rho[i] * count[i] / c.size();
+    }
+    for(int i = 0; i < nbin; ++i) ofsbin << rho[i] << ", "; ofsbin.close();
+    for(int i = 0; i < nbin; ++i) ofs << value[i] << ", "; ofs.close();
+    for(int i = 0; i < nbin; ++i) ofs1 << mmt1[i] << ", "; ofs1.close();
+    for(int i = 0; i < nbin; ++i) ofs2 << mmt2[i] << ", "; ofs2.close();
+    for(int i = 0; i < nbin; ++i) ofs3 << mmt3[i] << ", "; ofs3.close();
+
+    std::cout << "========cic PDF out put========" << std::endl;
+    std::cout << "density bin: " << std::endl;  for(int i = 0; i < nbin; ++i) std::cout << rho[i] << ", "; std::cout << std::endl;
+    std::cout << "count: " << std::endl;        for(int i = 0; i < nbin; ++i) std::cout << count[i] << ", "; std::cout << std::endl;
+    std::cout << "profile: " << std::endl;      for(int i = 0; i < nbin; ++i) std::cout << value[i] << ", "; std::cout << std::endl; 
+
+}
 
 /*
 void stupid_count(const double R, std::vector<Particle>& p, std::vector<Particle>& p0, std::vector<double>& stupid_result)
