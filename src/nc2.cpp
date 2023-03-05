@@ -7,7 +7,7 @@ using namespace std;
 int main()
 {
     read_parameter();
-    std::string fname{"dm_sub2halo"};
+    std::string fname{"dm_sub5e-6"};
     auto p = read_in_DM_3vector("/data0/MDPL2/dm_sub/" + fname + ".bin");
     // std::string fname{"halo_position"};
     // auto p1 = read_in_Halo_4vector("/data0/MDPL2/" + fname + ".bin");
@@ -16,7 +16,7 @@ int main()
     // std::cout << "number of halo: " << p.size() << std::endl;
     // std::vector<Particle>().swap(p1);
 
-    auto p0 = generate_random_particle(465,SimBoxL,50);
+    auto p0 = generate_random_particle(215,SimBoxL,50);
 
     clock_t begin, end;
     double diff;
