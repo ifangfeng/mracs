@@ -62,7 +62,7 @@ BINS     := mracs counting 2pc sigma_r sosta orcorr dipole
 all: mracs counting 2pc sigma_r sosta orcorr dipole
 
 %: $(OBJS) $(BUILD_DIR)/%.o
-	$(CXX) $(OPTIMIZE) $(OMP_PATH) $(MKL_LINK) $^ -o $@
+	$(CXX) $(OPTIMIZE) $(OMP_PATH) $(MKL_LINK) $^ -o bin/$@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(OPTIMIZE) $(FFTW_INCL) -c $^ -o $@ 

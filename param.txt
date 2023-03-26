@@ -16,7 +16,7 @@ Radius                          15 % Mpc/h
 DIREC                           .
 
 %---Particle_data
-DataDirec                       /data0/MDPL2/dm_sub/dm_sub2halo.bin
+DataDirec                       /data0/MDPL2/dm_sub/dm_sub5e-4.bin
 SimBoxL                         1000 % Mpc/h
 
 %---Number_of_threads_used
