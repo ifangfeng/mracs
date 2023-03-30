@@ -1,46 +1,45 @@
 #include"mracs.h"
 
-#define RANDOM
-#define NUMRAN 9474168
-#define NUMTEST 100
 
 int main()
 {
     read_parameter();
-    #ifdef RANDOM
-    std::vector<Particle> p;
+    auto p = read_in_Halo_4vector(DataDirec);
+
+    std::vector<Particle> p0;
     std::default_random_engine e;
     std::uniform_real_distribution<double> u(0, SimBoxL);
-    for(size_t i = 0; i < NUMRAN; ++i) p.push_back({u(e), u(e), u(e), 1});
-    #else
-    std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
-    std::vector<Particle> p; for(auto x : g) p.push_back({x.x, x.y, x.z, x.BulgeMass + x.StellarMass});
-    #endif
-    std::vector<double> xi_theta, theta;
-    for(int i = 1; i < NUMTEST+1; ++i){
-        // theta.push_back(acos(1-static_cast<double>(i)/NUMTEST));
-        theta.push_back(static_cast<double>(i)/NUMTEST);
-    }
+    for(size_t i = 0; i < p0.size(); ++i) p0.push_back({u(e), u(e), u(e), 1.});
 
+    std::vector<double> v_xi, v_theta, v_radii;
+    const double R0{5}, R1{50}, N_RADII{5}, N_THETA{5};
+    for(int i = 0; i < N_THETA; ++i) v_theta.push_back(M_PI/2 * static_cast<double>(i+1)/N_THETA);
+    for(int i = 0; i < N_RADII; ++i) v_radii.push_back(R0 * pow((R1/R0), static_cast<double>(i)/N_RADII));
+        
     auto s = sfc(p);
     auto sc = sfc_r2c(s);
     force_kernel_type(3);
-    for(int i = 0; i < NUMTEST; ++i){
-        auto w = wfc(Radius, theta[i]);
-        auto c = convol_c2r(sc, w);
-        xi_theta.push_back(inner_product(s, c, GridNum)*GridNum/pow(p.size(), 2) - 1);
-        delete[] c;
+
+    for(int i = 0; i < N_RADII; ++i)
+        for(int j = 0; j < N_THETA; ++j)
+        {
+            auto w = wfc(v_radii[i], v_theta[j]);
+            auto c = convol_c2r(sc, w);
+            v_xi.push_back(inner_product(s, c, GridNum)*GridNum/pow(p.size(), 2) - 1);
+            delete[] c;
+            delete[] w;
+        }
+
+    std::cout << "theta/Pi: ";
+    for(auto x : v_theta) std::cout << x/M_PI << ", ";
+    std::cout << std::endl;
+    for(int i = 0; i < N_RADII; ++i)
+    {   
+        std::cout << "R=" << v_radii[i] << ": ";
+        for(int j =0; j < N_THETA; ++j)
+            std::cout << v_xi[i*N_THETA + j] << ", ";
+        std::cout << std::endl;
     }
-    // check with shell kernel:
-    force_kernel_type(0);
-    auto w = wfc(Radius, 0);
-    auto c = convol_c2r(sc, w);
-    // print out result:
-    double sum{0};
-    for(auto x : xi_theta) sum += sin(x);
-    for(auto x : xi_theta) sum += sin(x);
-    for(auto x : theta) std::cout << 2*x/M_PI << ", "; std::cout << std::endl;
-    for(auto x : xi_theta) std::cout << x << ", "; std::cout << std::endl;
-    std::cout << "ave: " << sum/xi_theta.size() << std::endl;
-    std::cout << "shell: " << inner_product(s, c, GridNum)*GridNum/pow(p.size(), 2) - 1 << std::endl;
+    std::cout << std::endl;
 }
+
