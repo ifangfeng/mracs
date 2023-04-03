@@ -766,6 +766,7 @@ void force_base_type(int a, int n)
 
 //=======================================================================================
 //||||||||||||||| Fourier transform of window function ||||||||||||||
+// when cylinder kernel is adopted, 'theta' should be interpret as shape parameter 'H' 
 //=======================================================================================
 double* wft(const double Radius, const double theta)
 {
@@ -815,7 +816,27 @@ double* wft(const double Radius, const double theta)
                     //WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
                 }
         delete[] fxy;
-    } 
+    }
+    else if(KernelFunc == 4)
+    {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        const double rescaleH {theta * GridLen/SimBoxL};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*rescaleH)/(M_PI*DeltaXi*rescaleH);fz[0]=1;
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(1,TWOPI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo))/(M_PI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));fxy[0]=1;
+        
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
+        delete[] fxy;
+    }
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
         for(size_t j = 0; j < GridLen; ++j)

@@ -38,3 +38,10 @@ double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, do
 {
     return (std::cyl_bessel_j(0,TWOPI*sin(theta)*R*sqrt(ki*ki+kj*kj)))*cos(TWOPI * R * cos(theta) * kk);
 }
+
+// cylinder window function: sin(2Pi*k_z*h/2)/(Pi*k_z*h/2)*J_1(2Pi*k_r*R)/(2Pi*k_r*R)
+double WindowFunction_Cylinder(double R, double h, double ki, double kj, double kk)
+{
+    double k_r = sqrt(ki * ki + kj * kj);
+    return (sin(TWOPI*kk*h/2)/(M_PI*kk*h/2)*std::cyl_bessel_j(1,TWOPI*k_r*R)/(TWOPI*k_r*R));
+}

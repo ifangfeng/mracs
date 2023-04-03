@@ -10,7 +10,7 @@
 int main()
 {
     read_parameter();
-    std::vector<Particle> p = read_in_TNG_3vector(DataDirec);
+    std::vector<Particle> p = read_in_DM_3vector(DataDirec);
     // {- uncomment these 3 lines while using Millennium data -}
     // std::vector<Galaxy> g = read_in_Millennium_Run_galaxy_catalog(DataDirec);
     // std::vector<Particle> p; for(Galaxy i : g) p.push_back({i.x, i.y, i.z, 1.});
@@ -64,11 +64,11 @@ int main()
         var_r.push_back(inner_product(c,c,GridNum)/pow(p.size()*4./3*M_PI*pow(r_log[i]/SimBoxL,3),2)/GridNum-1);
         delete[] c;
     }
-
-    for(auto x : r_log)  std::cout << x << ", "; std::cout << std::endl;
-    for(auto x : xi_r)   std::cout << x << ", "; std::cout << std::endl;
-    for(auto x : xi_r_DP)  std::cout << x << ", "; std::cout << std::endl;
-    for(auto x : xi_r_ph)  std::cout << x << ", "; std::cout << std::endl;
-    for(auto x : xi_r_LS)  std::cout << x << ", "; std::cout << std::endl;
+    std::cout << "r: " ;
+    for(auto x : r_log)  std::cout << x << ", "; std::cout << std::endl << "xi: ";
+    for(auto x : xi_r)   std::cout << x << ", "; std::cout << std::endl << "xi_DP: ";
+    for(auto x : xi_r_DP)  std::cout << x << ", "; std::cout << std::endl << "xi_ph: ";
+    for(auto x : xi_r_ph)  std::cout << x << ", "; std::cout << std::endl << "xi_LS: ";
+    for(auto x : xi_r_LS)  std::cout << x << ", "; std::cout << std::endl << "variance: ";
     for(auto x : var_r)  std::cout << sqrt(x) << ", "; std::cout << std::endl;
 }
