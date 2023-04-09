@@ -172,6 +172,7 @@ double* project_value(const double* s, std::vector<Particle>& p0);
 void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result);
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);
 double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0);
+double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vector<Particle>& p0);
 int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz);
 std::vector<int> web_classify(double** cxx, std::vector<Particle>& p);
 double** tidal_tensor(fftw_complex* sc, double* w);

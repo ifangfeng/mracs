@@ -765,7 +765,7 @@ void force_base_type(int a, int n)
 }
 
 //=======================================================================================
-//||||||||||||||| Fourier transform of window function ||||||||||||||
+//||||||||||||||| Fourier transform of window function (without PowerPhi)||||||||||||||
 // when cylinder kernel is adopted, 'theta' should be interpret as shape parameter 'H' 
 //=======================================================================================
 double* wft(const double Radius, const double theta)
@@ -822,7 +822,7 @@ double* wft(const double Radius, const double theta)
         double fz[GridLen+1];
         double dXitwo{pow(DeltaXi,2)};
         const double rescaleH {theta * GridLen/SimBoxL};
-        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*rescaleH)/(M_PI*DeltaXi*rescaleH);fz[0]=1;
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*rescaleH)/(M_PI*i*DeltaXi*rescaleH);fz[0]=1;
         double* fxy = new double[(GridLen+1) * (GridLen+1)];
 
         #pragma omp parallel for 
@@ -866,6 +866,7 @@ double* wft(const double Radius, const double theta)
 
 //=======================================================================================
 //||||||||||||||| wfc3d (scaling function coefficients of window function) ||||||||||||||
+// when cylinder kernel is adopted, 'theta' should be interpret as shape parameter 'H' 
 //=======================================================================================
 double* wfc(const double Radius, const double theta)
 {
@@ -881,21 +882,11 @@ double* wfc(const double Radius, const double theta)
     {
         double (*WindowFunction)(double, double, double, double){nullptr};
         // WindowFunction point to correct kernel
-        if(KernelFunc == 0) 
-        {
-            WindowFunction = WindowFunction_Shell;
-        }
-        else if(KernelFunc == 1) 
-        {
-            WindowFunction = WindowFunction_Sphere;
-        }
-        else if(KernelFunc == 2) 
-        {
-            WindowFunction = WindowFunction_Gaussian;
-        }
-        #ifdef IN_PARALLEL
+        if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
+        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
+        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
+    
         #pragma omp parallel for
-        #endif
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
                 for(size_t k = 0; k <= GridLen; ++k)
@@ -910,17 +901,13 @@ double* wfc(const double Radius, const double theta)
         double dXitwo{pow(DeltaXi,2)};
         for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * rescaleR * cos(theta) * i*DeltaXi);
         double* fxy = new double[(GridLen+1) * (GridLen+1)];
-        #ifdef IN_PARALLEL
+
         #pragma omp parallel for 
-        #endif
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
-            {
                 fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));
-            }
-        #ifdef IN_PARALLEL
+
         #pragma omp parallel for 
-        #endif
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
                 for(size_t k = 0; k <= GridLen; ++k)
@@ -928,9 +915,8 @@ double* wfc(const double Radius, const double theta)
                     WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
                     //WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
                 }
-        #ifdef IN_PARALLEL
+
         #pragma omp parallel for 
-        #endif
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
                 for(size_t k = 0; k <= GridLen; ++k)
@@ -939,6 +925,35 @@ double* wfc(const double Radius, const double theta)
                 }
         delete[] fxy;
     }
+    else if(KernelFunc == 4)
+    {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        const double rescaleH {theta * GridLen/SimBoxL};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*rescaleH)/(M_PI*i*DeltaXi*rescaleH);fz[0]=1;
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(1,TWOPI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo))/(M_PI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));fxy[0]=1;
+        
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
+        
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+                }
+        delete[] fxy;
+    }
+
     #ifdef IN_PARALLEL     
     #pragma omp parallel for
     #endif
@@ -1411,6 +1426,42 @@ double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Pa
 
     return count;
 }
+
+
+// safe band is needed, i.e, no periodic boundary condictions added in
+double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vector<Particle>& p0)
+{
+    std::chrono::steady_clock::time_point begin4 = std::chrono::steady_clock::now();
+    auto count = new double[p0.size()];
+    double temp;
+
+    #pragma omp parallel for reduction(+:temp)
+    for(size_t n = 0; n < p0.size(); ++n)
+    {
+        temp = 0;
+        for(size_t i = 0; i < p.size(); ++i)
+        {
+            double xx = p[i].x - p0[n].x;
+            double yy = p[i].y - p0[n].y;
+            double zz = p[i].z - p0[n].z;
+            if((abs(xx) < R) && (abs(yy) < R) && (abs(zz) < H/2))
+                if(xx*xx + yy*yy  < R*R)
+                    ++temp;
+        }
+            
+        count[n]= temp;
+    }
+
+    std::chrono::steady_clock::time_point end4 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 4 count_cyl = "
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end4 - begin4).count()
+    << "[ms]" << std::endl;
+
+    return count;
+}
+
+
+
 
 // enviriamental parameter array locate in gride point, defined as the number of positive eigenvalue
 // of tidle tensor of matter density fileds, which is obtand by Cloud-in-Cell interpolation of particles

@@ -6,6 +6,7 @@ std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string Data
 std::vector<Particle> read_in_TNG_3vector(std::string DataDirec);
 std::vector<Particle> read_in_DM_3vector(std::string DataDirec);
 std::vector<Particle> read_in_Halo_4vector(std::string DataDirec);
+std::vector<Particle> read_in_Halo_3vector(std::string DataDirec);
 
 //global variables for MRACS interface
 int Resolution;                    // MRA scale parameter J
