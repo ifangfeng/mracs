@@ -387,54 +387,47 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
 double* densityPowerFFT(double* s)
 {
     auto sc = sfc_r2c(s);
-    double* Pk_array = new double[GridNum];
-    #ifdef IN_PARALLEL
+    const double npart = array_sum(s,GridNum);
+    const uint64_t NyquistL {GridLen/2};
+    double* Pk_array = new double[NyquistL * NyquistL * NyquistL];
+
     #pragma omp parallel for
-    #endif
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k)
+    for(size_t i = 0; i < NyquistL; ++i)
+        for(size_t j = 0; j < NyquistL; ++j)
+            for(size_t k = 0; k < NyquistL; ++k)
             {
-                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                Pk_array[i * NyquistL * NyquistL + j * NyquistL + k] = 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
             }
-    #ifdef IN_PARALLEL
-    #pragma omp parallel for
-    #endif
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
-            {
-                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
-                Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
-            }
     fftw_free(sc);
-    
-    int klen = GridLen*sqrt(3.);
+
+    uint64_t klen = NyquistL*sqrt(3.);
     int nk[klen];
     double* Pk = new double[klen];
-    for(int i = 0; i < klen; ++i)
-    {   
+    for(int i = 0; i < klen; ++i){   
         nk[i] = 0;
         Pk[i] = 0;
     }
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen; ++k)
+    for(size_t i = 0; i < NyquistL; ++i)
+        for(size_t j = 0; j < NyquistL; ++j)
+            for(size_t k = 0; k < NyquistL; ++k)
             {
                 int kM = sqrt(i * i + j * j + k * k);
-                Pk[kM] += Pk_array[i * GridLen * GridLen +j * GridLen + k];
+                Pk[kM] += Pk_array[i * NyquistL * NyquistL + j * NyquistL + k];
                 nk[kM] += 1;
             }
     delete[] Pk_array;
-    
+    std::cout << "nk[i]" << std::endl;
+    for(int i = 1; i < NyquistL; ++i) std::cout << static_cast<double>(nk[i])/(M_PI/2*i*i) << ", ";std::cout << std::endl;
     for(int i = 0; i < klen; ++i)
     {
         if(nk[i] != 0)
         Pk[i] /= nk[i];
-        Pk[i] /= pow(GridNum,2);
+        Pk[i] /= pow(npart,2);
+        //Pk[i] -= 1./pow(npart,1); // poission shot noise
     }
+    Pk[0]=0;
     
     return Pk;
 }
@@ -446,63 +439,56 @@ double* densityPowerFFT(double* s)
 double* densityPowerDWT(double* s)
 {
     auto sc = sfc_r2c(s);
-    double* Pk_array = new double[GridNum];
-    #ifdef IN_PARALLEL
+    const double npart = array_sum(s,GridNum);
+    const uint64_t NyquistL {GridLen/2 + 1};
+    double* Pk_array = new double[NyquistL * NyquistL * NyquistL];
+
     #pragma omp parallel for
-    #endif
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k)
+    for(size_t i = 0; i < NyquistL; ++i)
+        for(size_t j = 0; j < NyquistL; ++j)
+            for(size_t k = 0; k < NyquistL; ++k)
             {
-                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                Pk_array[i * NyquistL * NyquistL + j * NyquistL + k] = 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
             }
-    #ifdef IN_PARALLEL
-    #pragma omp parallel for
-    #endif
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
-            {
-                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
-                Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
-            }
     fftw_free(sc);
-
-    #ifdef IN_PARALLEL
+    
     #pragma omp parallel for
-    #endif
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen; ++k)
+    for(size_t i = 0; i < NyquistL; ++i)
+        for(size_t j = 0; j < NyquistL; ++j)
+            for(size_t k = 0; k < NyquistL; ++k)
             {
-                Pk_array[i * GridLen * GridLen + j * GridLen + k] *=
-                PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
-            }
-    int klen = GridLen*sqrt(3.);
+                Pk_array[i * NyquistL * NyquistL + j * NyquistL + k] *=
+                PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]/pow(npart,2);
+            }Pk_array[0] = 0;
+    return Pk_array;
+    uint64_t klen = NyquistL*sqrt(3.);
     int nk[klen];
     double* Pk = new double[klen];
-    for(int i = 0; i < klen; ++i)
-    {   
+    for(int i = 0; i < klen; ++i){   
         nk[i] = 0;
         Pk[i] = 0;
     }
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen; ++k)
+    for(size_t i = 0; i < NyquistL; ++i)
+        for(size_t j = 0; j < NyquistL; ++j)
+            for(size_t k = 0; k < NyquistL; ++k)
             {
                 int kM = sqrt(i * i + j * j + k * k);
-                Pk[kM] += Pk_array[i * GridLen * GridLen +j * GridLen + k];
+                Pk[kM] += Pk_array[i * NyquistL * NyquistL + j * NyquistL + k];
                 nk[kM] += 1;
             }
     delete[] Pk_array;
+    //std::cout << "nk[i]" << std::endl;
+    //for(int i = 1; i < NyquistL; ++i) std::cout << static_cast<double>(nk[i])/(M_PI/2*i*i) << ", ";std::cout << std::endl;
     for(int i = 0; i < klen; ++i)
     {
         if(nk[i] != 0)
         Pk[i] /= nk[i];
-        Pk[i] /= pow(GridNum,2);
+        Pk[i] /= pow(npart,2);
+        //Pk[i] -= 1./pow(npart,1); // poission shot noise
     }
+    Pk[0]=0;
     
     return Pk;
 }
