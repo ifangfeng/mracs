@@ -1,5 +1,5 @@
 %---MRA_Resolution
-Resolution                      9
+Resolution                      8
 
 %---Base_Function_Type
 BaseType                        1 % _0_BSpline,_1_Daubechies
@@ -10,7 +10,7 @@ SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      1 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-Ring:4-cylinder
-Radius                          8 % Mpc/h
+Radius                          100 % Mpc/h
 
 %---Main_Directory
 DIREC                           .

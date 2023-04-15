@@ -41,7 +41,7 @@ int main(){
 
     const int P_Sample = 1; 
     const uint64_t N_Sample = P_Sample * GridLen * GridLen;
-    const double ratio_v = 4/3.*M_PI*pow(Radius*GridLen/SimBoxL, 3)/GridNum;
+    const double ratio_v = 4/3.*M_PI*pow(Radius*GridLen/SimBoxL, 3)/GridVol;
     const double norm = pow(p.size()*ratio_v, 3)* N_Sample * N_Phi_Twins;
     
 

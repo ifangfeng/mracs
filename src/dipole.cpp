@@ -25,7 +25,7 @@ int main()
         {
             auto w = wfc(v_radii[i], v_theta[j]);
             auto c = convol_c2r(sc, w);
-            v_xi.push_back(inner_product(s, c, GridNum)*GridNum/pow(p.size(), 2) - 1);
+            v_xi.push_back(inner_product(s, c, GridVol)*GridVol/pow(p.size(), 2) - 1);
             delete[] c;
             delete[] w;
         }

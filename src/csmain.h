@@ -32,7 +32,7 @@ extern double SimBoxL;                    // simulation box length in Mpc/h
 extern int Threads;                       // number of threads that used
 extern int phiSupport;                    // support of scaling function phi
 extern uint64_t GridLen;                  // side length of MRA frame, == 2^J
-extern uint64_t GridNum;                  // number of cubes, == (2^J)^3
+extern uint64_t GridVol;                  // number of cubes, == (2^J)^3
 extern std::string DIREC;
 extern std::string RESOL;
 extern std::string RADII;
@@ -157,6 +157,8 @@ double* densityPowerDWT(double* s);
 double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2);
 double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2);
 double* PowerPhiFunc(const size_t N);
+double* symmetryFold_lean(double* wA);
+double* windowArray(const double Radius, const double theta);
 double* wft(const double Radius, const double theta);
 double* wfc(const double Radius, const double theta);
 double* convol3d(double* s, double* w);

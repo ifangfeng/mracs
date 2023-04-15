@@ -14,9 +14,9 @@ int main()
     for(int i = 0; i <= NumShape; ++i) SPvec.push_back(SPmin * pow(SPmax/SPmin,static_cast<double>(i)/NumShape));
     for(int i = 0; i <= NumScale; ++i) SLvec.push_back(SLmin * pow(SLmax/SLmin,static_cast<double>(i)/NumScale));
 
-    auto s = sfc(p); std::cout << "raw var: " << inner_product(s,s,GridNum) * GridNum/pow(p.size(), 2) - 1 << std::endl;
+    auto s = sfc(p); std::cout << "raw var: " << inner_product(s,s,GridVol) * GridVol/pow(p.size(), 2) - 1 << std::endl;
     auto sc= sfc_r2c(s);
-    auto s_non = sfc(p_non); std::cout << "raw var: " << inner_product(s_non,s_non,GridNum) * GridNum/pow(p_non.size(), 2) - 1 << std::endl;
+    auto s_non = sfc(p_non); std::cout << "raw var: " << inner_product(s_non,s_non,GridVol) * GridVol/pow(p_non.size(), 2) - 1 << std::endl;
     auto sc_non= sfc_r2c(s_non);
     for(auto SP : SPvec)
         for(auto SL : SLvec)
@@ -26,8 +26,8 @@ int main()
             auto w = wfc(D/2,H);
             auto c = convol_c2r(sc,w);
             auto c_non = convol_c2r(sc_non,w);
-            var.push_back(inner_product(c,c,GridNum) * GridNum/pow(p.size(), 2) - 1);
-            var_non.push_back(inner_product(c_non,c_non,GridNum) * GridNum/pow(p_non.size(), 2) - 1);
+            var.push_back(inner_product(c,c,GridVol) * GridVol/pow(p.size(), 2) - 1);
+            var_non.push_back(inner_product(c_non,c_non,GridVol) * GridVol/pow(p_non.size(), 2) - 1);
             xvec.push_back(SL); yvec.push_back(SP); Hvec.push_back(H); Dvec.push_back(D);
             delete[] w;
             delete[] c;

@@ -118,7 +118,7 @@ void read_parameter()
 
 
     GridLen = 1 << Resolution;
-    GridNum = 1UL << Resolution*3;
+    GridVol = 1UL << Resolution*3;
 
     RESOL = "L" + std::to_string(GridLen);
     RADII = "R" + std::to_string(Radius);
@@ -237,7 +237,7 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
         step[i] = i * SampRate;
     }
 
-    auto s = new double[GridNum]();         // density field coefficients in v_j space
+    auto s = new double[GridVol]();         // density field coefficients in v_j space
 
     std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
 
@@ -387,7 +387,7 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
 double* densityPowerFFT(double* s)
 {
     auto sc = sfc_r2c(s);
-    const double npart = array_sum(s,GridNum);
+    const double npart = array_sum(s,GridVol);
     const uint64_t NyquistL {GridLen/2};
     double* Pk_array = new double[NyquistL * NyquistL * NyquistL];
 
@@ -432,6 +432,186 @@ double* densityPowerFFT(double* s)
     return Pk;
 }
 
+// window array
+double* windowArray(const double Radius, const double theta)
+{
+    const double DeltaXi = 1./GridLen;
+    const double RGrid {Radius * GridLen/SimBoxL};
+
+    auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
+
+    if(KernelFunc <= 2)
+    {
+        double (*WindowFunction)(double, double, double, double){nullptr};
+        if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
+        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
+        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
+    
+        #pragma omp parallel for
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = WindowFunction(RGrid, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+    }
+    else if(KernelFunc == 3)
+    {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * RGrid * cos(theta) * i*DeltaXi);
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo));
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
+        delete[] fxy;
+    }
+    else if(KernelFunc == 4)
+    {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        const double HGrid {theta * GridLen/SimBoxL};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*HGrid)/(M_PI*i*DeltaXi*HGrid);fz[0]=1;
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(1,TWOPI*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo))/(M_PI*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo));fxy[0]=1;
+        
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k];
+        delete[] fxy;
+    }
+
+    return WindowArray;
+}
+
+// given the sfc array, caluculate its variance after convolution with desire window W(Radius,theta)
+double* varianceDWT(double* s, const double Radius, const double theta)
+{
+    const double npart = array_sum(s, GridVol);
+    const double DeltaXi = 1./GridLen;
+    const double RGrid {Radius * GridLen/SimBoxL};
+
+    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+
+    auto sc = sfc_r2c(s);
+    auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
+    auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
+
+    if(KernelFunc <= 2)
+    {
+        double (*WindowFunction)(double, double, double, double){nullptr};
+        // WindowFunction point to correct kernel
+        if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
+        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
+        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
+    
+        #pragma omp parallel for
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
+                    WindowFunction(RGrid, i * DeltaXi, j * DeltaXi, k * DeltaXi) * PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+                }
+    }
+    else if(KernelFunc == 3)
+    {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * RGrid * cos(theta) * i*DeltaXi);
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo));
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
+                    //WindowFunction_Dual_Ring(RGrid, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+                }
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+                }
+        delete[] fxy;
+    }
+    else if(KernelFunc == 4)
+    {
+        double fz[GridLen+1];
+        double dXitwo{pow(DeltaXi,2)};
+        const double HGrid {theta * GridLen/SimBoxL};
+        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*HGrid)/(M_PI*i*DeltaXi*HGrid);fz[0]=1;
+        double* fxy = new double[(GridLen+1) * (GridLen+1)];
+
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(1,TWOPI*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo))/(M_PI*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo));fxy[0]=1;
+        
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
+        
+        #pragma omp parallel for 
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                {
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+                }
+        delete[] fxy;
+    }
+
+    #ifdef IN_PARALLEL     
+    #pragma omp parallel for
+    #endif
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2+1; ++k)
+            {
+                w[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k]
+                = WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)]
+                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)];
+            }
+
+    std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 2 wfc3d    = " 
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()
+    << "[ms]" << std::endl;
+
+    delete[] WindowArray;
+
+    return w;
+}
 
 //=======================================================================================
 // calculate density power spectrum using projected density fileds mathematically
@@ -439,29 +619,34 @@ double* densityPowerFFT(double* s)
 double* densityPowerDWT(double* s)
 {
     auto sc = sfc_r2c(s);
-    const double npart = array_sum(s,GridNum);
+    const double npart = array_sum(s,GridVol);
     const uint64_t NyquistL {GridLen/2 + 1};
-    double* Pk_array = new double[NyquistL * NyquistL * NyquistL];
+    double* Pk_array = new double[GridVol];
 
     #pragma omp parallel for
-    for(size_t i = 0; i < NyquistL; ++i)
-        for(size_t j = 0; j < NyquistL; ++j)
-            for(size_t k = 0; k < NyquistL; ++k)
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k)
             {
-                Pk_array[i * NyquistL * NyquistL + j * NyquistL + k] = 
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
             }
     fftw_free(sc);
-    
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
+            Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+            Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
+
     #pragma omp parallel for
-    for(size_t i = 0; i < NyquistL; ++i)
-        for(size_t j = 0; j < NyquistL; ++j)
-            for(size_t k = 0; k < NyquistL; ++k)
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen; ++k)
             {
-                Pk_array[i * NyquistL * NyquistL + j * NyquistL + k] *=
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] *= 
                 PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]/pow(npart,2);
-            }Pk_array[0] = 0;
+            }
     return Pk_array;
     uint64_t klen = NyquistL*sqrt(3.);
     int nk[klen];
@@ -488,7 +673,7 @@ double* densityPowerDWT(double* s)
         Pk[i] /= pow(npart,2);
         //Pk[i] -= 1./pow(npart,1); // poission shot noise
     }
-    Pk[0]=0;
+    //Pk[0]=0;
     
     return Pk;
 }
@@ -499,7 +684,7 @@ double* densityPowerDWT(double* s)
 //=======================================================================================
 double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2)
 {
-    auto cross_array = new double[GridNum][2];
+    auto cross_array = new double[GridVol][2];
 
     #ifdef IN_PARALLEL
     #pragma omp parallel for
@@ -549,7 +734,7 @@ double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2)
     {
         if(nk[i] != 0)
         ccf[i] /= nk[i];
-        ccf[i] /= pow(GridNum,2);
+        ccf[i] /= pow(GridVol,2);
     }
     
     return ccf;
@@ -562,7 +747,7 @@ double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2)
 //=======================================================================================
 double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2)
 {
-    auto cross_array = new double[GridNum][2];
+    auto cross_array = new double[GridVol][2];
 
     #ifdef IN_PARALLEL
     #pragma omp parallel for
@@ -621,7 +806,7 @@ double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2)
     {
         if(nk[i] != 0)
         ccf[i] /= nk[i];
-        ccf[i] /= pow(GridNum,2);
+        ccf[i] /= pow(GridVol,2);
     }
     
     return ccf;
@@ -703,7 +888,7 @@ void force_resoluton_J(int j)
     if(Resolution != j){
         Resolution = j;
         GridLen = 1 << Resolution;
-        GridNum = 1UL << Resolution*3;
+        GridVol = 1UL << Resolution*3;
         delete[] PowerPhi;
         PowerPhi = PowerPhiFunc(GridLen);
         std::cout << "!MRACS resolution has been forced to " << j << "\n";
@@ -750,105 +935,46 @@ void force_base_type(int a, int n)
     }
 }
 
-//=======================================================================================
-//||||||||||||||| Fourier transform of window function (without PowerPhi)||||||||||||||
-// when cylinder kernel is adopted, 'theta' should be interpret as shape parameter 'H' 
-//=======================================================================================
-double* wft(const double Radius, const double theta)
+double* symmetryFold_lean(double* wA)
 {
-    const double DeltaXi = 1./GridLen;
-    const double rescaleR {Radius * GridLen/SimBoxL};
+    auto w = new double[GridLen * GridLen * (GridLen/2+1)]();
 
-    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
-
-    auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
-    auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
-
-    if(KernelFunc <= 2)
-    {
-        double (*WindowFunction)(double, double, double, double){nullptr};
-
-        if(KernelFunc == 0)      WindowFunction = WindowFunction_Shell;
-        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
-        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
-
-        #pragma omp parallel for
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
-                    WindowFunction(rescaleR, i * DeltaXi, j * DeltaXi, k * DeltaXi);
-                }
-    }
-    else if(KernelFunc == 3)
-    {
-        double fz[GridLen+1];
-        double dXitwo{pow(DeltaXi,2)};
-        for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * rescaleR * cos(theta) * i*DeltaXi);
-        double* fxy = new double[(GridLen+1) * (GridLen+1)];
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
-                    //WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
-                }
-        delete[] fxy;
-    }
-    else if(KernelFunc == 4)
-    {
-        double fz[GridLen+1];
-        double dXitwo{pow(DeltaXi,2)};
-        const double rescaleH {theta * GridLen/SimBoxL};
-        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*rescaleH)/(M_PI*i*DeltaXi*rescaleH);fz[0]=1;
-        double* fxy = new double[(GridLen+1) * (GridLen+1)];
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(1,TWOPI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo))/(M_PI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));fxy[0]=1;
-        
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
-        delete[] fxy;
-    }
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
         for(size_t j = 0; j < GridLen; ++j)
             for(size_t k = 0; k < GridLen/2+1; ++k)
             {
                 w[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k]
-                = WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)];
+                = wA[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + wA[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
+                + wA[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + wA[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + wA[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
+                + wA[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
+                + wA[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)]
+                + wA[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)];
             }
 
-    std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
-    std::cout << "Time difference 2 wft3d    = " 
-    << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()
-    << "[ms]" << std::endl;
-
-    delete[] WindowArray;
-
+    delete[] wA;
     return w;
 }
 
+//=======================================================================================
+//||||||||||||||| Fourier transform of window function (without PowerPhi)||||||||||||||
+// when cylinder kernel is adopted, 'theta' should be interpret as shape parameter 'H' 
+//=======================================================================================
+double* wft(const double Radius, const double theta)
+{
+    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+
+    auto WindowArray = windowArray(Radius, theta);                          
+    auto w = symmetryFold_lean(WindowArray);
+    
+    std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
+    std::cout << "Time difference 2 wft3d    = " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count() << "[ms]" << std::endl;
+
+    return w;
+}
 
 //=======================================================================================
 //||||||||||||||| wfc3d (scaling function coefficients of window function) ||||||||||||||
@@ -856,114 +982,17 @@ double* wft(const double Radius, const double theta)
 //=======================================================================================
 double* wfc(const double Radius, const double theta)
 {
-    const double DeltaXi = 1./GridLen;
-    const double rescaleR {Radius * GridLen/SimBoxL};
-
     std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
 
-    auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
-    auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
+    auto WindowArray = windowArray(Radius, theta);                          
 
-    if(KernelFunc <= 2)
-    {
-        double (*WindowFunction)(double, double, double, double){nullptr};
-        // WindowFunction point to correct kernel
-        if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
-        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
-        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
-    
-        #pragma omp parallel for
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
-                    WindowFunction(rescaleR, i * DeltaXi, j * DeltaXi, k * DeltaXi) * PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
-                }
-    }
-    else if(KernelFunc == 3)
-    {
-        double fz[GridLen+1];
-        double dXitwo{pow(DeltaXi,2)};
-        for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * rescaleR * cos(theta) * i*DeltaXi);
-        double* fxy = new double[(GridLen+1) * (GridLen+1)];
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
-                    //WindowFunction_Dual_Ring(rescaleR, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
-                }
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
-                }
-        delete[] fxy;
-    }
-    else if(KernelFunc == 4)
-    {
-        double fz[GridLen+1];
-        double dXitwo{pow(DeltaXi,2)};
-        const double rescaleH {theta * GridLen/SimBoxL};
-        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*rescaleH)/(M_PI*i*DeltaXi*rescaleH);fz[0]=1;
-        double* fxy = new double[(GridLen+1) * (GridLen+1)];
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(1,TWOPI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo))/(M_PI*rescaleR*sqrt(i*i*dXitwo+j*j*dXitwo));fxy[0]=1;
-        
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
-        
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
-                }
-        delete[] fxy;
-    }
-
-    #ifdef IN_PARALLEL     
-    #pragma omp parallel for
-    #endif
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2+1; ++k)
-            {
-                w[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k]
-                = WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)];
-            }
+    #pragma omp parallel for 
+    for(size_t i = 0; i < (GridLen+1)*(GridLen+1)*(GridLen+1); ++i) WindowArray[i] *= PowerPhi[i];
+  
+    auto w = symmetryFold_lean(WindowArray);
 
     std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
-    std::cout << "Time difference 2 wfc3d    = " 
-    << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()
-    << "[ms]" << std::endl;
-
-    delete[] WindowArray;
+    std::cout << "Time difference 2 wfc3d    = " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count() << "[ms]" << std::endl;
 
     return w;
 }
@@ -1018,7 +1047,7 @@ fftw_complex* sfc_r2c(double* s)
 double* convol_c2r(fftw_complex* sc, double* w)
 {
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
-    auto c = new double[GridNum];
+    auto c = new double[GridVol];
 
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
@@ -1031,7 +1060,7 @@ double* convol_c2r(fftw_complex* sc, double* w)
 
     fftw_execute(pl);
     #pragma omp parallel for
-    for(size_t i = 0; i < GridNum; ++i) c[i] /= GridNum;
+    for(size_t i = 0; i < GridVol; ++i) c[i] /= GridVol;
 
     fftw_free(sc1);
     return c;
@@ -1046,7 +1075,7 @@ double** tidal_tensor(fftw_complex* sc, double* w)
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     double** cxx = new double*[7];
     for(int i = 0; i < 7; ++i){
-        cxx[i] = new double[GridNum];
+        cxx[i] = new double[GridVol];
     }
     fftw_plan pldf = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc0, cxx[0], FFTW_MEASURE);
     fftw_plan plxx = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[1], FFTW_MEASURE);
@@ -1285,7 +1314,7 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
 // projected value at each grid point
 double* prj_grid(const double* s)
 {
-    auto a = new double[GridNum];
+    auto a = new double[GridVol];
 
     double sum = 0;
     #pragma omp parallel for reduction (+:sum)
