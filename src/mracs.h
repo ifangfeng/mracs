@@ -18,8 +18,8 @@ double Radius;                     // window radius R in Mpc/h
 double SimBoxL;                    // simulation box length in Mpc/h
 int Threads;                       // number of threads that used
 int phiSupport;                    // support of scaling function phi
-uint64_t GridLen;                  // side length of MRA frame, == 2^J
-uint64_t GridVol;                  // number of cubes, == (2^J)^3
+int64_t GridLen;                   // side length of MRA frame, == 2^J
+int64_t GridVol;                   // number of cubes, == (2^J)^3
 std::string DIREC;
 std::string RESOL;
 std::string RADII;

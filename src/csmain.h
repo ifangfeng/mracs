@@ -31,8 +31,8 @@ extern double Radius;                     // window radius R in Mpc/h
 extern double SimBoxL;                    // simulation box length in Mpc/h
 extern int Threads;                       // number of threads that used
 extern int phiSupport;                    // support of scaling function phi
-extern uint64_t GridLen;                  // side length of MRA frame, == 2^J
-extern uint64_t GridVol;                  // number of cubes, == (2^J)^3
+extern int64_t GridLen;                  // side length of MRA frame, == 2^J
+extern int64_t GridVol;                  // number of cubes, == (2^J)^3
 extern std::string DIREC;
 extern std::string RESOL;
 extern std::string RADII;
@@ -154,6 +154,7 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k);
 double* densityPowerFFT(double* s);
 double* densityPowerDWT(double* s);
+double* densityPowerDWT2(double* s);
 double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2);
 double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2);
 double* PowerPhiFunc(const size_t N);

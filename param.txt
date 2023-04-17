@@ -1,11 +1,11 @@
 %---MRA_Resolution
-Resolution                      8
+Resolution                      9
 
 %---Base_Function_Type
-BaseType                        1 % _0_BSpline,_1_Daubechies
+BaseType                        0 % _0_BSpline,_1_Daubechies
 
 %---Wavelet_phi_Genus
-phiGenus                        4
+phiGenus                        5
 SampRate                        1000
 
 %---Convolution_Kernel

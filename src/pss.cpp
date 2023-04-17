@@ -50,7 +50,7 @@ int main()
         {
             auto w = wfc(D/2,H);
             auto c = convol_c2r(sc,w);
-            var.push_back(inner_product(c,c,GridNum) * GridNum/pow(p.size(), 2) - 1);
+            var.push_back(inner_product(c,c,GridVol) * GridVol/pow(p.size(), 2) - 1);
             auto pk = densityPowerDWT(c);
             double itg{0};
             for(size_t i = 0; i < pow((GridLen/2),3); ++i) itg += pk[i];

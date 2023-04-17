@@ -378,61 +378,12 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
     return p;
 }
 
+
+
+
 //=======================================================================================
-// particles first assigned to grid using different window function, then we can take
-// advantage of FFT to get its Fourier Coefficiencs and average all orientation
-// to have P(k) as function of scalar module k, notice that sfc function do the 
-// assignment step exactly
-//=======================================================================================
-double* densityPowerFFT(double* s)
-{
-    auto sc = sfc_r2c(s);
-    const double npart = array_sum(s,GridVol);
-    const uint64_t NyquistL {GridLen/2};
-    double* Pk_array = new double[NyquistL * NyquistL * NyquistL];
-
-    #pragma omp parallel for
-    for(size_t i = 0; i < NyquistL; ++i)
-        for(size_t j = 0; j < NyquistL; ++j)
-            for(size_t k = 0; k < NyquistL; ++k)
-            {
-                Pk_array[i * NyquistL * NyquistL + j * NyquistL + k] = 
-                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
-                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
-            }
-    fftw_free(sc);
-
-    uint64_t klen = NyquistL*sqrt(3.);
-    int nk[klen];
-    double* Pk = new double[klen];
-    for(int i = 0; i < klen; ++i){   
-        nk[i] = 0;
-        Pk[i] = 0;
-    }
-    for(size_t i = 0; i < NyquistL; ++i)
-        for(size_t j = 0; j < NyquistL; ++j)
-            for(size_t k = 0; k < NyquistL; ++k)
-            {
-                int kM = sqrt(i * i + j * j + k * k);
-                Pk[kM] += Pk_array[i * NyquistL * NyquistL + j * NyquistL + k];
-                nk[kM] += 1;
-            }
-    delete[] Pk_array;
-    std::cout << "nk[i]" << std::endl;
-    for(int i = 1; i < NyquistL; ++i) std::cout << static_cast<double>(nk[i])/(M_PI/2*i*i) << ", ";std::cout << std::endl;
-    for(int i = 0; i < klen; ++i)
-    {
-        if(nk[i] != 0)
-        Pk[i] /= nk[i];
-        Pk[i] /= pow(npart,2);
-        //Pk[i] -= 1./pow(npart,1); // poission shot noise
-    }
-    Pk[0]=0;
-    
-    return Pk;
-}
-
 // window array
+//=======================================================================================
 double* windowArray(const double Radius, const double theta)
 {
     const double DeltaXi = 1./GridLen;
@@ -500,127 +451,11 @@ double* windowArray(const double Radius, const double theta)
 double* varianceDWT(double* s, const double Radius, const double theta)
 {
     const double npart = array_sum(s, GridVol);
-    const double DeltaXi = 1./GridLen;
-    const double RGrid {Radius * GridLen/SimBoxL};
-
-    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
-
+    auto WindowPk = windowArray(Radius,theta);
+    #pragma omp paraller for
+    for(size_t i = 0; i < (GridLen+1)*(GridLen+1)*(GridLen+1); ++i) WindowPk[i] = pow(WindowPk[i], 2) * PowerPhi[i];
+    auto w = new double[GridVol];
     auto sc = sfc_r2c(s);
-    auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
-    auto w = new double[GridLen * GridLen * (GridLen/2+1)]();                             
-
-    if(KernelFunc <= 2)
-    {
-        double (*WindowFunction)(double, double, double, double){nullptr};
-        // WindowFunction point to correct kernel
-        if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
-        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
-        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
-    
-        #pragma omp parallel for
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = 
-                    WindowFunction(RGrid, i * DeltaXi, j * DeltaXi, k * DeltaXi) * PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
-                }
-    }
-    else if(KernelFunc == 3)
-    {
-        double fz[GridLen+1];
-        double dXitwo{pow(DeltaXi,2)};
-        for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * RGrid * cos(theta) * i*DeltaXi);
-        double* fxy = new double[(GridLen+1) * (GridLen+1)];
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(0,TWOPI*sin(theta)*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo));
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
-                    //WindowFunction_Dual_Ring(RGrid, theta, i * DeltaXi, j * DeltaXi, k * DeltaXi);
-                }
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
-                }
-        delete[] fxy;
-    }
-    else if(KernelFunc == 4)
-    {
-        double fz[GridLen+1];
-        double dXitwo{pow(DeltaXi,2)};
-        const double HGrid {theta * GridLen/SimBoxL};
-        for(size_t i = 0; i <= GridLen; ++i) fz[i] = sin(M_PI*i*DeltaXi*HGrid)/(M_PI*i*DeltaXi*HGrid);fz[0]=1;
-        double* fxy = new double[(GridLen+1) * (GridLen+1)];
-
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                fxy[i * (GridLen+1) + j] = std::cyl_bessel_j(1,TWOPI*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo))/(M_PI*RGrid*sqrt(i*i*dXitwo+j*j*dXitwo));fxy[0]=1;
-        
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
-        
-        #pragma omp parallel for 
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                {
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] *= PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
-                }
-        delete[] fxy;
-    }
-
-    #ifdef IN_PARALLEL     
-    #pragma omp parallel for
-    #endif
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2+1; ++k)
-            {
-                w[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k]
-                = WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + k]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + (GridLen-k)]
-                + WindowArray[i * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)]
-                + WindowArray[(GridLen-i) * (GridLen+1) * (GridLen+1) + (GridLen-j) * (GridLen+1) + (GridLen-k)];
-            }
-
-    std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
-    std::cout << "Time difference 2 wfc3d    = " 
-    << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()
-    << "[ms]" << std::endl;
-
-    delete[] WindowArray;
-
-    return w;
-}
-
-//=======================================================================================
-// calculate density power spectrum using projected density fileds mathematically
-//=======================================================================================
-double* densityPowerDWT(double* s)
-{
-    auto sc = sfc_r2c(s);
-    const double npart = array_sum(s,GridVol);
-    const uint64_t NyquistL {GridLen/2 + 1};
     double* Pk_array = new double[GridVol];
 
     #pragma omp parallel for
@@ -639,29 +474,124 @@ double* densityPowerDWT(double* s)
             Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
             Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
 
+
+    return w;
+}
+
+//=======================================================================================
+// particles first assigned to grid using different window function, then we can take
+// advantage of FFT to get its Fourier Coefficiencs and average all orientation
+// to have P(k) as function of scalar module k, notice that sfc function do the 
+// assignment step exactly
+//=======================================================================================
+double* densityPowerFFT(double* s)
+{
+    auto sc = sfc_r2c(s);
+    const double npart = array_sum(s,GridVol);
+    const int64_t NyquistL {GridLen/2 + 1};
+    double* Pk_array = new double[(GridLen/2+1)*GridLen*GridLen];
+
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
         for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen; ++k)
+            for(size_t k = 0; k < GridLen/2+1; ++k)
             {
-                Pk_array[i * GridLen * GridLen + j * GridLen + k] *= 
-                PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k]/pow(npart,2);
+                Pk_array[i * GridLen * (GridLen/2+1) + j * (GridLen/2+1) + k] = 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
             }
-    return Pk_array;
-    uint64_t klen = NyquistL*sqrt(3.);
+    fftw_free(sc);
+    //#pragma omp parallel for
+    //for(size_t i = 0; i < GridLen; ++i)
+    //    for(size_t j = 0; j < GridLen; ++j)
+    //        for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
+    //        Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+    //        Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
+
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 +1; ++k){
+                Pk_array[i * GridLen * (GridLen/2+1) + j * (GridLen/2+1) + k] *= PowerPhi[i*(GridLen+1)*(GridLen+1) + j*(GridLen+1) + k];
+            }
+    int64_t klen = GridLen*sqrt(3.);
     int nk[klen];
     double* Pk = new double[klen];
     for(int i = 0; i < klen; ++i){   
         nk[i] = 0;
         Pk[i] = 0;
     }
-    for(size_t i = 0; i < NyquistL; ++i)
-        for(size_t j = 0; j < NyquistL; ++j)
-            for(size_t k = 0; k < NyquistL; ++k)
+    for(size_t i = 0; i < GridLen ; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2+1; ++k)
             {
                 int kM = sqrt(i * i + j * j + k * k);
-                Pk[kM] += Pk_array[i * NyquistL * NyquistL + j * NyquistL + k];
+                Pk[kM] += Pk_array[i * GridLen * (GridLen/2+1) + j * (GridLen/2+1) + k];
                 nk[kM] += 1;
+            }
+    delete[] Pk_array;
+
+    for(int i = 0; i < klen; ++i)
+    {
+        if(nk[i] != 0)
+        Pk[i] /= nk[i];
+        Pk[i] /= pow(npart,2);
+        //Pk[i] -= 1./pow(npart,1); // poission shot noise
+    }
+    Pk[0]=0;
+    std::cout << "hh4" << "\n";
+    return Pk;
+}
+
+//=======================================================================================
+// calculate density power spectrum using projected density fileds mathematically
+//=======================================================================================
+double* densityPowerDWT(double* s)
+{
+    auto sc = sfc_r2c(s);
+    const double npart = array_sum(s,GridVol);
+    const int64_t NyquistL {GridLen/2};
+    double* Pk_array = new double[GridVol];
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k)
+            {
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
+            }
+    fftw_free(sc);
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k)
+            {
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] *= 
+                PowerPhi[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k];
+            }
+
+    int64_t klen = GridLen*sqrt(3.);
+    int nk[klen];
+    double* Pk = new double[klen];
+    for(int i = 0; i < klen; ++i){   
+        nk[i] = 0;
+        Pk[i] = 0;
+    }
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 +1; ++k)
+            {
+                int kM = sqrt(i * i + j * j + k * k);
+                Pk[kM] += Pk_array[i * GridLen * GridLen + j * GridLen + k];
+                nk[kM] += 1;
+                if(kM == 1)
+                {
+                    std::cout << "(" << i << ", " << j << ", " << k << ")'s value = " 
+                    << Pk_array[i * GridLen * GridLen + j * GridLen + k]
+                    << std::endl;
+                }
             }
     delete[] Pk_array;
     //std::cout << "nk[i]" << std::endl;
@@ -677,6 +607,84 @@ double* densityPowerDWT(double* s)
     
     return Pk;
 }
+
+//=======================================================================================
+// calculate density power spectrum using projected density fileds mathematically
+//=======================================================================================
+double* densityPowerDWT2(double* s)
+{
+std::cout << "----------Finished0" << std::endl;
+    auto sc = sfc_r2c(s);
+    const double npart = array_sum(s,GridVol);
+    const int64_t NyquistL {GridLen/2};
+    double* Pk_array = new double[GridVol];
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k)
+            {
+                Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
+                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
+            }
+std::cout << "----------Finished1" << std::endl;
+    fftw_free(sc);
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
+            Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
+            Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
+
+    auto Pk_ap = new double[(2*GridLen-1)*(2*GridLen-1)*(2*GridLen-1)];
+std::cout << "----------Finished2" << std::endl;
+    #pragma omp parallel for
+    for(int64_t i = 1 - GridLen; i < GridLen; ++i)
+        for(int64_t j = 1 - GridLen; j < GridLen; ++j)
+            for(int64_t k = 1 - GridLen; k < GridLen; ++k)
+            {
+                Pk_ap[(i+GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (j+GridLen-1) * (2*GridLen-1) + (k+GridLen-1)] = 
+                Pk_array[((GridLen+i)%GridLen) * GridLen * GridLen + ((GridLen+j)%GridLen) * GridLen + ((GridLen+k)%GridLen)] * 
+                PowerPhi[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
+            }
+
+    delete[] Pk_array;
+std::cout << "----------Finished3" << std::endl;
+    int64_t klen = GridLen*sqrt(3.);
+    int nk[klen];
+    double* Pk = new double[klen];
+    for(int i = 0; i < klen; ++i){ nk[i] = 0; Pk[i] = 0;}
+
+    for(int64_t i = 1 - NyquistL; i < NyquistL; ++i)
+        for(int64_t j = 1 - NyquistL; j < NyquistL; ++j)
+            for(int64_t k = 1 - NyquistL; k < NyquistL; ++k)
+            {
+                int kM = sqrt(i * i + j * j + k * k);
+                Pk[kM] += Pk_ap[(i+GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (j+GridLen-1) * (2*GridLen-1) + (k+GridLen-1)];
+                nk[kM] += 1;
+                if(kM == 1)
+                {
+                    std::cout << "(" << i << ", " << j << ", " << k << ")'s value = " 
+                    << Pk_ap[(i+GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (j+GridLen-1) * (2*GridLen-1) + (k+GridLen-1)]\
+                    << std::endl;
+                }
+            }
+std::cout << "----------Finished4" << std::endl;
+    delete[] Pk_ap;
+
+    for(int i = 0; i < klen; ++i)
+    {
+        if(nk[i] != 0)
+        Pk[i] /= nk[i];
+        Pk[i] /= pow(npart,2);
+        //Pk[i] -= 1./pow(npart,1); // poission shot noise
+    }
+    Pk[0]=0;
+    
+    return Pk;
+}
+
 
 //=======================================================================================
 // calculate cross-correlation function c(k) of two density fileds in fourier space,
