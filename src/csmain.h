@@ -155,6 +155,7 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k)
 double* densityPowerFFT(double* s);
 double* densityPowerDWT(double* s);
 double* densityPowerDWT2(double* s);
+double* densityVarianceArray(fftw_complex* sc);
 double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2);
 double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2);
 double* PowerPhiFunc(const size_t N);
@@ -168,6 +169,7 @@ fftw_complex* sfc_r2c(double* s);
 fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
 double array_sum(double* w, size_t N);
 double inner_product(double* v0, double* v1, size_t N);
+double var_CombinewithKernel(double* pk_plus, const double Radius, const double theta);
 void force_resoluton_J(int j);
 void force_kernel_type(int x);
 void force_base_type(int a, int n);

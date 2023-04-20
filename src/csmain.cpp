@@ -447,17 +447,30 @@ double* windowArray(const double Radius, const double theta)
     return WindowArray;
 }
 
-// given the sfc array, caluculate its variance after convolution with desire window W(Radius,theta)
-double* varianceDWT(double* s, const double Radius, const double theta)
+double var_CombinewithKernel(double* pk_plus, const double Radius, const double theta)
 {
-    const double npart = array_sum(s, GridVol);
     auto WindowPk = windowArray(Radius,theta);
     #pragma omp paraller for
-    for(size_t i = 0; i < (GridLen+1)*(GridLen+1)*(GridLen+1); ++i) WindowPk[i] = pow(WindowPk[i], 2) * PowerPhi[i];
-    auto w = new double[GridVol];
-    auto sc = sfc_r2c(s);
-    double* Pk_array = new double[GridVol];
+    for(size_t i = 0; i < (GridLen+1)*(GridLen+1)*(GridLen+1); ++i) WindowPk[i] = pow(WindowPk[i], 2);
+    
+    double sum{0};
+    #pragma omp parallel for reduction (+: sum)
+    for(int64_t i = 1 - GridLen; i < GridLen; ++i)
+        for(int64_t j = 1 - GridLen; j < GridLen; ++j)
+            for(int64_t k = 1 - GridLen; k < GridLen; ++k)
+            {
+                sum += pk_plus[(i+GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (j+GridLen-1) * (2*GridLen-1) + (k+GridLen-1)] *
+                WindowPk[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
+            }
+    double temp = pk_plus[(GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (GridLen-1) * (2*GridLen-1) + (GridLen-1)] * WindowPk[0];
 
+    return sum/temp-1;
+}
+
+// given the sfc array, caluculate its raw variance array i.e. no window smoothed
+double* densityVarianceArray(fftw_complex* sc)
+{
+    auto Pk_array = new double[GridVol];
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
         for(size_t j = 0; j < GridLen; ++j)
@@ -467,15 +480,27 @@ double* varianceDWT(double* s, const double Radius, const double theta)
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
             }
-    fftw_free(sc);
+    
+    #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
         for(size_t j = 0; j < GridLen; ++j)
             for(size_t k = GridLen/2 + 1; k < GridLen; ++k)
             Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
             Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
 
+    auto Pk_plus = new double[(2*GridLen-1)*(2*GridLen-1)*(2*GridLen-1)];
 
-    return w;
+    #pragma omp parallel for
+    for(int64_t i = 1 - GridLen; i < GridLen; ++i)
+        for(int64_t j = 1 - GridLen; j < GridLen; ++j)
+            for(int64_t k = 1 - GridLen; k < GridLen; ++k)
+            {
+                Pk_plus[(i+GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (j+GridLen-1) * (2*GridLen-1) + (k+GridLen-1)] = 
+                Pk_array[((GridLen+i)%GridLen) * GridLen * GridLen + ((GridLen+j)%GridLen) * GridLen + ((GridLen+k)%GridLen)] * 
+                PowerPhi[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
+            }
+    
+    return Pk_plus;
 }
 
 //=======================================================================================
@@ -613,7 +638,6 @@ double* densityPowerDWT(double* s)
 //=======================================================================================
 double* densityPowerDWT2(double* s)
 {
-std::cout << "----------Finished0" << std::endl;
     auto sc = sfc_r2c(s);
     const double npart = array_sum(s,GridVol);
     const int64_t NyquistL {GridLen/2};
@@ -628,7 +652,6 @@ std::cout << "----------Finished0" << std::endl;
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
                 pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
             }
-std::cout << "----------Finished1" << std::endl;
     fftw_free(sc);
     #pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
@@ -638,7 +661,6 @@ std::cout << "----------Finished1" << std::endl;
             Pk_array[((GridLen - i)%GridLen) * GridLen * GridLen + ((GridLen - j)%GridLen) * GridLen + GridLen - k];
 
     auto Pk_ap = new double[(2*GridLen-1)*(2*GridLen-1)*(2*GridLen-1)];
-std::cout << "----------Finished2" << std::endl;
     #pragma omp parallel for
     for(int64_t i = 1 - GridLen; i < GridLen; ++i)
         for(int64_t j = 1 - GridLen; j < GridLen; ++j)
@@ -648,9 +670,12 @@ std::cout << "----------Finished2" << std::endl;
                 Pk_array[((GridLen+i)%GridLen) * GridLen * GridLen + ((GridLen+j)%GridLen) * GridLen + ((GridLen+k)%GridLen)] * 
                 PowerPhi[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
             }
-
+    auto info = new double[2];
+    info[0] = Pk_array[0] * PowerPhi[0];
+    info[1] = array_sum(Pk_ap,(2*GridLen-1)*(2*GridLen-1)*(2*GridLen-1));
     delete[] Pk_array;
-std::cout << "----------Finished3" << std::endl;
+    
+    return info;
     int64_t klen = GridLen*sqrt(3.);
     int nk[klen];
     double* Pk = new double[klen];

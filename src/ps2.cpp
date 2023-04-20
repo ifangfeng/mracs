@@ -2,28 +2,56 @@
 
 int main(){
     read_parameter();
-    auto p = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-5.bin");
+    auto p = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto s = sfc(p);
     auto sc = sfc_r2c(s);
-    auto w = wfc(Radius,0);
-    auto c = convol_c2r(sc,w);
-    auto var_inner = inner_product(c,c,GridVol)/pow(p.size()/GridLen,2)*GridLen-1;
 
-    std::cout << "BF: " << array_sum(s,GridVol) << "\n";
-    std::cout << "AF: " << array_sum(c,GridVol) << "\n";
+    const int NumH{9}, NumD{9}; // shape: H/D; 
+    const double Hmin{10}, Dmin{10}, Hmax{100}, Dmax{100};
+    std::vector<double> Hvec, Dvec, var_inner, var_pk, var_RE, xvec, yvec;
+    for(int i = 0; i <= NumH; ++i) Hvec.push_back(Hmin + i*(Hmax-Hmin)/NumH);
+    for(int i = 0; i <= NumD; ++i) Dvec.push_back(Dmin + i*(Dmax-Dmin)/NumD);
 
-    std::cout << "var_inner: " << var_inner << std::endl;
+std::chrono::steady_clock::time_point begin0 = std::chrono::steady_clock::now();
 
-    //std::cout << "Fourier:" << std::endl;
-    //for(int i = 0; i < 10 ; ++i) std::cout << "[" << sc[i][0] << ", " << sc[i][1] << "], "; std::cout << std::endl;
-    //std::cout << "Pk:" << std::endl;
-    //for(int i = 0; i < 10 ; ++i) std::cout << sqrt(pow(sc[i][0],2) + pow(sc[i][1],2)) << ", "; std::cout << std::endl;
-    auto Pk_af = densityPowerDWT(c);
-    double var_pk{0};
-    for(size_t i = 0; i < GridVol; ++i) var_pk += Pk_af[i]; --var_pk; std::cout << var_pk << ", and " << Pk_af[0] <<"\n";
-    std::cout << "var_pk: " << var_pk << std::endl;
-    std::cout << "var_inner: " << var_inner << std::endl;
-    std::cout << "var_inner/var_pk: " << var_inner/var_pk << std::endl;
+    for(auto H : Hvec)
+        for(auto D : Dvec){
+            auto w = wfc(D/2,H);
+            auto c = convol_c2r(sc,w);
+            var_inner.push_back(inner_product(c,c,GridVol)/pow(p.size(),2)*GridVol-1);
+        }
+
+std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
+
+    auto pk_plus = densityVarianceArray(sc);
+    for(auto H : Hvec)
+        for(auto D : Dvec){
+            var_pk.push_back(var_CombinewithKernel(pk_plus,D/2,H));
+        }
+
+std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+    //std::cout << "BF: " << array_sum(s,GridVol) << "\n";
+    //std::cout << "AF: " << array_sum(c,GridVol) << "\n";
+    //std::cout << "var_inner: " << var_inner << std::endl;
+
+    for(int i = 0; i < var_inner.size(); ++i) var_RE.push_back(var_pk[i]/var_inner[i]-1);
+    std::cout << "var_k: " << "\n";for(auto x : var_pk) std::cout << x << ", ";std::cout << std::endl;
+    std::cout << "var_x: " << "\n";for(auto x : var_inner) std::cout << x << ", ";std::cout << std::endl;
+
+    std::cout << "MRACS x-Statistics t = " << std::chrono::duration_cast<std::chrono::milliseconds>(begin1 - begin0).count() << "[ms]" << std::endl;
+    std::cout << "MRACS k-Statistics t = " << std::chrono::duration_cast<std::chrono::milliseconds>(begin2 - begin1).count() << "[ms]" << std::endl;
+    std::cout << "Relative Error (var_k/var_x -1):" << std::endl;
+    auto ss = std::cout.precision();
+    std::cout << "H vs. D ";for(auto x : Dvec) std::cout << x << ", "; std::cout << std::endl;
+    for(int i = 0; i < Hvec.size(); ++i){
+        std::cout << std::setprecision(3) << std::defaultfloat << Hvec[i] << ": ";
+        for(int j = 0; j < Dvec.size(); ++j) std::cout << std::setprecision(2) << std::scientific << var_RE[i*Dvec.size()+j] << ", ";
+        std::cout << std::endl;
+        }
+    
+    //std::cout << "var_pk: " << var_pk << std::endl;
+    //std::cout << "var_inner: " << var_inner << std::endl;
+    //std::cout << "var_inner/var_pk: " << var_inner/var_pk << std::endl;
 
     //std::cout << "=====================a: " << BaseType << " , n: " << phiGenus << "==========================" << std::endl;
     //for(int i = 0; i < GridLen/2 + 1; ++i) std::cout << TWOPI*i/SimBoxL             << ", "; std::cout << '\n' << '\n';
