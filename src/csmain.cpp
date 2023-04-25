@@ -495,10 +495,12 @@ double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int
     for(size_t i = 0; i < LEN; ++i)
         for(size_t j = 0; j < LEN; ++j){
             double k = sqrt(i*i + j*j);
+            int kc = k;
+            double kf = k-kc;
             int index = k/STEP;
             double xl = Pk[index];
             double xr = Pk[index +1];
-            double pk = (xr - xl)/STEP * (i%STEP) + xl;
+            double pk = (xr - xl)*kf + xl;
             Pk_map[i*LEN + j] = pk;
         }
     double var{0};
