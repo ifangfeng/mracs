@@ -37,7 +37,7 @@ int main()
     // for(int i = 0; i < NUMTEST; ++i){
     //     auto w = wfc(r_log[i], 0);
     //     auto c = convol_c2r(sc, w);
-    //     xi_r.push_back(inner_product(s, c, GridNum) * GridNum/pow(p.size(), 2) - 1);
+    //     xi_r.push_back(inner_product(s, c, GridVol) * GridVol/pow(p.size(), 2) - 1);
     //     delete[] c;
     // }
 
@@ -46,13 +46,13 @@ int main()
         auto w = wfc(r_log[i], 0);
         auto c = convol_c2r(sc, w);
         auto c0 = convol_c2r(sc0, w);
-        double dd = inner_product(s, c, GridNum);
-        double dr = inner_product(s0,c, GridNum);
-        double rr = inner_product(s0,c0,GridNum);
+        double dd = inner_product(s, c, GridVol);
+        double dr = inner_product(s0,c, GridVol);
+        double rr = inner_product(s0,c0,GridVol);
         xi_r_DP.push_back(dd/dr-1);
         xi_r_ph.push_back(dd/rr-1);
         xi_r_LS.push_back((dd-2*dr+rr)/rr);
-        xi_r.push_back(dd * GridNum/pow(p.size(), 2) - 1);
+        xi_r.push_back(dd * GridVol/pow(p.size(), 2) - 1);
         delete[] w;
         delete[] c;
     }
@@ -61,7 +61,7 @@ int main()
     for(int i = 0; i < NUMTEST; ++i){
         auto w = wfc(r_log[i], 0);
         auto c = convol_c2r(sc, w);
-        var_r.push_back(inner_product(c,c,GridNum)/pow(p.size()*4./3*M_PI*pow(r_log[i]/SimBoxL,3),2)/GridNum-1);
+        var_r.push_back(inner_product(c,c,GridVol)/pow(p.size()*4./3*M_PI*pow(r_log[i]/SimBoxL,3),2)/GridVol-1);
         delete[] c;
     }
     std::cout << "r: " ;

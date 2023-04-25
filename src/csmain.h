@@ -152,9 +152,8 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* Spectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k);
-double* densityPowerFFT(double* s);
-double* densityPowerDWT(double* s);
-double* densityPowerDWT2(double* s);
+double* densityPowerFFT(fftw_complex* sc);
+double* densityPowerDWT(fftw_complex* sc);
 double* densityVarianceArray(fftw_complex* sc);
 double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2);
 double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2);
@@ -173,6 +172,7 @@ double var_CombinewithKernel(double* pk_plus, const double Radius, const double 
 void force_resoluton_J(int j);
 void force_kernel_type(int x);
 void force_base_type(int a, int n);
+double* prj_grid(const double* s);
 double* project_value(const double* s, std::vector<Particle>& p0);
 void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result);
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);
@@ -181,7 +181,6 @@ double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vec
 int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz);
 std::vector<int> web_classify(double** cxx, std::vector<Particle>& p);
 double** tidal_tensor(fftw_complex* sc, double* w);
-double* prj_grid(const double* s);
 std::vector<Particle> generate_random_particle(int x, double L, double w);
 void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double rhomax, int nbin, std::string ofname);
 void cic_pdf(std::vector<int64_t>& c, double rhomin, double rhomax, double cicexpect, std::string ofname);
