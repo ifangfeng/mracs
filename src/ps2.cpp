@@ -6,21 +6,21 @@ int main(){
     auto s = sfc(p);
     auto sc = sfc_r2c(s);
 
-    const int NumH{9}, NumD{9}; // shape: H/D; 
+    const int NumH{3}, NumD{3}; // shape: H/D; 
     const double Hmin{10}, Dmin{10}, Hmax{100}, Dmax{100};
-    std::vector<double> Hvec, Dvec, var_inner, var_pk, var_RE, xvec, yvec;
+    std::vector<double> Hvec, Dvec, var_inner, var_pk, var_pk2d, var_RE, xvec, yvec;
     for(int i = 0; i <= NumH; ++i) Hvec.push_back(Hmin + i*(Hmax-Hmin)/NumH);
     for(int i = 0; i <= NumD; ++i) Dvec.push_back(Dmin + i*(Dmax-Dmin)/NumD);
 
-std::chrono::steady_clock::time_point begin0 = std::chrono::steady_clock::now();
-
-    for(auto H : Hvec)
-        for(auto D : Dvec){
-            auto w = wfc(D/2,H);
-            auto c = convol_c2r(sc,w);
-            var_inner.push_back(inner_product(c,c,GridVol)/pow(p.size(),2)*GridVol-1);
-        }
-
+//std::chrono::steady_clock::time_point begin0 = std::chrono::steady_clock::now();
+//
+//    for(auto H : Hvec)
+//        for(auto D : Dvec){
+//            auto w = wfc(D/2,H);
+//            auto c = convol_c2r(sc,w);
+//            var_inner.push_back(inner_product(c,c,GridVol)/pow(p.size(),2)*GridVol-1);
+//        }
+//
 std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
 
     auto pk_plus = densityVarianceArray(sc);
@@ -30,17 +30,35 @@ std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
         }
 
 std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+
+    auto pk = densityPowerDWT(sc);
+    for(auto H : Hvec)
+        for(auto D : Dvec){
+            var_pk2d.push_back(Pk_variance_2dRH(pk,D/2,H,4));
+        }
+
+std::chrono::steady_clock::time_point begin3 = std::chrono::steady_clock::now();
+
+
+
+
+
     //std::cout << "BF: " << array_sum(s,GridVol) << "\n";
     //std::cout << "AF: " << array_sum(c,GridVol) << "\n";
     //std::cout << "var_inner: " << var_inner << std::endl;
 
-    for(int i = 0; i < var_inner.size(); ++i) var_RE.push_back(var_pk[i]/var_inner[i]-1);
-    std::cout << "var_k: " << "\n";for(auto x : var_pk) std::cout << x << ", ";std::cout << std::endl;
-    std::cout << "var_x: " << "\n";for(auto x : var_inner) std::cout << x << ", ";std::cout << std::endl;
+    //for(int i = 0; i < var_inner.size(); ++i) var_RE.push_back(var_pk[i]/var_inner[i]-1);
+    for(int i = 0; i < var_pk.size(); ++i) var_RE.push_back(var_pk2d[i]/var_pk[i]-1);
+    //std::cout << "var_x   : " << "\n";for(auto x : var_inner) std::cout << x << ", ";std::cout << std::endl;
+    std::cout << "var_k   : " << "\n";for(auto x : var_pk) std::cout << x << ", ";std::cout << std::endl;
+    std::cout << "var_k2d : " << "\n";for(auto x : var_pk2d) std::cout << x << ", ";std::cout << std::endl;
 
-    std::cout << "MRACS x-Statistics t = " << std::chrono::duration_cast<std::chrono::milliseconds>(begin1 - begin0).count() << "[ms]" << std::endl;
+    //std::cout << "MRACS x-Statistics t = " << std::chrono::duration_cast<std::chrono::milliseconds>(begin1 - begin0).count() << "[ms]" << std::endl;
     std::cout << "MRACS k-Statistics t = " << std::chrono::duration_cast<std::chrono::milliseconds>(begin2 - begin1).count() << "[ms]" << std::endl;
-    std::cout << "Relative Error (var_k/var_x -1):" << std::endl;
+    std::cout << "MRACS k-Stat_in_2d t = " << std::chrono::duration_cast<std::chrono::milliseconds>(begin3 - begin2).count() << "[ms]" << std::endl;
+    
+    //std::cout << "Relative Error (var_k/var_x -1):" << std::endl;
+    std::cout << "Relative Error (var_k2d/var_k -1):" << std::endl;
     auto ss = std::cout.precision();
     std::cout << "H vs. D ";for(auto x : Dvec) std::cout << x << ", "; std::cout << std::endl;
     for(int i = 0; i < Hvec.size(); ++i){

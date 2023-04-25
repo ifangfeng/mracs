@@ -169,6 +169,7 @@ fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
 double array_sum(double* w, size_t N);
 double inner_product(double* v0, double* v1, size_t N);
 double var_CombinewithKernel(double* pk_plus, const double Radius, const double theta);
+double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int FINE);
 void force_resoluton_J(int j);
 void force_kernel_type(int x);
 void force_base_type(int a, int n);

@@ -467,7 +467,53 @@ double var_CombinewithKernel(double* pk_plus, const double Radius, const double 
     return sum/temp-1;
 }
 
-// given the sfc array, caluculate its raw variance array i.e. no window smoothed
+// FINE is integral finer parameter and takes value from set {0,1,2,3,4,5}
+// notice the Maximun finer parameter is limited to 5 
+double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int FINE)
+{
+    if(FINE < 0 || 5 < FINE){
+        FINE = 0;
+        std::cout << "illegal finer parameter, reset as default FINE=0 " << std::endl;
+    }
+    const int STEP = 1 << FINE;
+    const int64_t LEN {(GridLen/2+1)*STEP};
+    double fz[LEN], fr[LEN];
+    double* Pk_map = new double[LEN*LEN];
+
+    if(KernelFunc == 3){
+        for(size_t i = 0; i < LEN; ++i) fz[i] = cos(TWOPI * i * Radius/SimBoxL * cos(theta)/STEP);
+        for(size_t i = 0; i < LEN; ++i) fr[i] = std::cyl_bessel_j(0,TWOPI*i*sin(theta)*Radius/SimBoxL/STEP);
+    }
+    else if(KernelFunc == 4){
+        for(size_t i = 0; i < LEN; ++i) fz[i] = sin(M_PI*i*theta/SimBoxL)/(M_PI*i*theta/SimBoxL);fz[0]=1;
+        for(size_t i = 0; i < LEN; ++i) fr[i] = std::cyl_bessel_j(1,TWOPI*Radius/SimBoxL*i)/(M_PI*Radius/SimBoxL*i);fr[0]=1;
+    }
+    else{
+        std::cout << "Pk_variance_2dRH: KernelFunc == 3 or. 4 only" << std::endl;
+        return 0;
+    }
+    for(size_t i = 0; i < LEN; ++i)
+        for(size_t j = 0; j < LEN; ++j){
+            double k = sqrt(i*i + j*j);
+            int index = k/STEP;
+            double xl = Pk[index];
+            double xr = Pk[index +1];
+            double pk = (xr - xl)/STEP * (i%STEP) + xl;
+            Pk_map[i*LEN + j] = pk;
+        }
+    double var{0};
+    for(int i = 0; i < LEN; ++i)
+        for(int j = 0; j < LEN; ++j){
+            double ii = i;
+            var += fr[i]*fz[j]*Pk_map[i*LEN+j]*TWOPI*ii/STEP;
+        }
+
+    return var;    
+}
+
+
+
+// given the sfc array, caluculate its raw variance array i.e. no window smoothing
 double* densityVarianceArray(fftw_complex* sc)
 {
     auto Pk_array = new double[GridVol];
