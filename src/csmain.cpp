@@ -505,9 +505,9 @@ double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int
         }
     double var{0};
     for(int i = 0; i < LEN; ++i)
-        for(int j = 0; j < LEN; ++j){
+        for(int j = 1-LEN; j < LEN; ++j){
             double ii = i;
-            var += fr[i]*fz[j]*Pk_map[i*LEN+j]*TWOPI*ii/STEP;
+            var += fr[i]*fz[abs(j)]*Pk_map[i*LEN+abs(j)]*TWOPI*ii/pow(STEP,3);
         }
 
     return var;    
@@ -633,13 +633,13 @@ double* densityPowerDWT(fftw_complex* sc)
         if(nk[i] != 0)
         Pk[i] /= nk[i];
         Pk[i] /= pow(npart,2);
-        //Pk[i] -= 1./pow(npart,1); // poission shot noise
+        
     }
     Pk[0]=0;
    
     return Pk;
 }
-
+//Pk[i] -= 1./pow(npart,1); // poission shot noise
 
 //=======================================================================================
 // calculate cross-correlation function c(k) of two density fileds in fourier space,

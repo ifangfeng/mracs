@@ -19,7 +19,7 @@ int main()
     std::string direct2 {"/mnt/disk/data/MDPL2/snap_130/"};
     std::string fname;
 
-    auto s0 = init_array(GridNum);
+    auto s0 = init_array(GridVol);
 
     for(int n = 19; n >= 0; --n)
     {
@@ -102,7 +102,7 @@ void pdf(std::vector<Particle>& p, double* s, double R)
 void merge_and_clean(std::vector<Particle>& p, double* s)
 {
     auto s_tmp = sfc(p);
-    array_merge(s,s_tmp,GridNum);
+    array_merge(s,s_tmp,GridVol);
     std::vector<Particle>().swap(p);
     delete[] s_tmp;
 }

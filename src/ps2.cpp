@@ -34,7 +34,7 @@ std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
     auto pk = densityPowerDWT(sc);
     for(auto H : Hvec)
         for(auto D : Dvec){
-            var_pk2d.push_back(Pk_variance_2dRH(pk,D/2,H,4));
+            var_pk2d.push_back(Pk_variance_2dRH(pk,D/2,H,0));
         }
 
 std::chrono::steady_clock::time_point begin3 = std::chrono::steady_clock::now();

@@ -1,5 +1,5 @@
 %---MRA_Resolution
-Resolution                      8
+Resolution                      10
 
 %---Base_Function_Type
 BaseType                        0 % _0_BSpline,_1_Daubechies
@@ -9,7 +9,7 @@ phiGenus                        5
 SampRate                        1000
 
 %---Convolution_Kernel
-KernelFunc                      4 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-Ring:4-cylinder
+KernelFunc                      0 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-Ring:4-cylinder
 Radius                          5 % Mpc/h
 
 %---Main_Directory
