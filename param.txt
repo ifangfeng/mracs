@@ -5,18 +5,18 @@ Resolution                      10
 BaseType                        0 % _0_BSpline,_1_Daubechies
 
 %---Wavelet_phi_Genus
-phiGenus                        5
+phiGenus                        1
 SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      0 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-Ring:4-cylinder
-Radius                          5 % Mpc/h
+Radius                          40 % Mpc/h
 
 %---Main_Directory
 DIREC                           .
 
 %---Particle_data
-DataDirec                       /data0/MDPL2/dm_sub/dm_sub5e-4.bin
+DataDirec                       /data0/MDPL2/dm_sub/dm_sub5e-5.bin
 SimBoxL                         1000 % Mpc/h
 
 %---Number_of_threads_used

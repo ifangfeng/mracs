@@ -1447,7 +1447,18 @@ double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vec
 // fourier space so we can take advantage of FFT, for detials see Hahn O., Porciani C., Carollo C. M., Dekel A., 2007, MNRAS, 375, 489
 // https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..489H
 
+// generate n random particle locate in box (0,boxsize)^3 
+std::vector<Particle> default_random_particle(double boxsize, size_t n)
+{
+    std::default_random_engine e;
+    std::uniform_real_distribution<double> v(0,SimBoxL);
 
+    std::vector<Particle> p0;
+    for(size_t i = 0; i < n; ++i) 
+        p0.push_back({v(e), v(e), v(e), 1.});
+    
+    return p0;
+}
 
 // x is the number of particles per side, i.e there are x^3 particles in all
 // L is the box size and w is the safe band width, i.e random point locate in (w,L-w)^3
