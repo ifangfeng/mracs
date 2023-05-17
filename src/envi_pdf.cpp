@@ -4,73 +4,67 @@
 #include"mracs.h"
 using namespace std;
 
-void prj_pdf_temp(std::vector<Particle>& p0, double* c, double nf, double rhomin, double rhomax, int nbin, std::string ofname);
-
+void prj_pdf_temp(std::vector<Particle>& p0, double* c, double R, double nf, double rhomin, double rhomax, int nbin, std::string ofname, bool HM);
+std::string GSR {"_GSR5"};
 
 int main(){
     read_parameter();
-    std::string ifname {"output/envi_J10_halo_Mcut2e12.txt"};
+    std::string ifname {"output/envi_J10" + GSR + "_halo_Mcut2e12.txt"};
     std::ifstream ifs {ifname};
     int temp{0};
     char comma{0};
     std::vector<int> envi;
     while(ifs >> temp >> comma) envi.push_back(temp);
-    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
-    auto p2 = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
-    if(envi.size() == p2.size()) std::cout << "size matched, continue" << std::endl;
-    else return 0;
+    auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
+    auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    if(envi.size() == hl.size()) std::cout << "size matched, continue" << std::endl;
+    else {std::cout << "loading data with error, Abort\n"; return 0;}
 
     std::vector<Particle> sheets,filaments,knots;
-    for(size_t i = 0; i < p2.size(); ++i)
-    {
-        if(envi[i] == 1) sheets.push_back(p2[i]);
-        else if(envi[i] == 2) filaments.push_back(p2[i]);
-        else if(envi[i] == 3) knots.push_back(p2[i]);
+    for(size_t i = 0; i < hl.size(); ++i){
+        if(envi[i] == 1) sheets.push_back(hl[i]);
+        else if(envi[i] == 2) filaments.push_back(hl[i]);
+        else if(envi[i] == 3) knots.push_back(hl[i]);
     }
-    std::cout << "numbers of sheet: " << sheets.size() << std::endl;
-    std::cout << "numbers of filament: " << filaments.size() << std::endl;
-    std::cout << "numbers of knot: " << knots.size() << std::endl;
 
-    auto p0 = generate_random_particle(1000,SimBoxL,0);
+    std::vector<double> vecR {20,30,40,50,80};
+    std::vector<std::vector<Particle>> vecP {dm, hl, sheets, filaments, knots};
+    std::vector<string> ofname {"dm", "hl", "st", "fl", "kt"};
+    for(int i = 0; i < vecP.size(); ++i){
+        std::cout << "number of " << ofname[i] << ": " << vecP[i].size() << "\n";
+    }
 
     force_kernel_type(1);
-    auto w = wfc(Radius,0);
-
-    auto s = sfc(p1);
-    auto c = convol3d(s,w);
-    delete[] s;
-    prj_pdf_temp(p0, c, static_cast<double>(p1.size())/GridVol,0,5,100,"dm");
-
-    auto s2 = sfc(p2);
-    auto c2 = convol3d(s2,w);
-    delete[] s2;
-    prj_pdf_temp(p0, c2, static_cast<double>(p2.size())/GridVol,0,5,100,"hl");
-
-    auto s_st = sfc(sheets);
-    auto c_st = convol3d(s_st,w);
-    delete[] s_st;
-    prj_pdf_temp(p0, c_st, static_cast<double>(sheets.size())/GridVol,0,5,100,"st");
-
-    auto s_fl = sfc(filaments);
-    auto c_fl = convol3d(s_fl,w);
-    delete[] s_fl;
-    prj_pdf_temp(p0, c_fl, static_cast<double>(filaments.size())/GridVol,0,5,100,"fl");
-
-    auto s_kt = sfc(knots);
-    auto c_kt = convol3d(s_kt,w);
-    delete[] s_kt;
-    prj_pdf_temp(p0, c_kt, static_cast<double>(knots.size())/GridVol,0,5,100,"kt");
-
+    auto p0 = generate_random_particle(1000,SimBoxL,0);
+    
+    for(auto R : vecR){
+        auto w = wfc(R,0);
+        for(int i = 0; i < vecP.size(); ++i){
+            auto s = sfc(vecP[i]);
+            auto c = convol3d(s,w);
+            double norm = static_cast<double>(vecP[i].size())/GridVol;
+            delete[] s;
+            int xbin {200};
+            if(R < 40 && i == 4) xbin = 100;
+            if(R < 30 && (i != 0)) xbin = 50; 
+            double rhomax = 5;
+            if(R > 30) rhomax = 3;
+            prj_pdf_temp(p0,c,R,norm,0,rhomax,xbin,ofname[i],1);
+        }
+    }
 
 }
 
 
 // nf is the normalization factor, i.e sum(sfc)/(2^J)^3 = expectation of projected value
 // e.g. nbin = 100, rhomax = 5, rhomin = 0
-void prj_pdf_temp(std::vector<Particle>& p0, double* c, double nf, double rhomin, double rhomax, int nbin, std::string ofname)
+void prj_pdf_temp(std::vector<Particle>& p0, double* c, double R, double nf, double rhomin, double rhomax, int nbin, std::string ofname, bool HM)
 {
-    std::string ofn = "output/envi_pdf_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
-    std::string ofbn = "output/envi_xbin_" + ofname + "_R" + std::to_string((int)Radius) + "_J" + std::to_string(Resolution) + ".txt";
+    std::string suffix = ofname + "_R" + std::to_string((int)R) + "_J" + std::to_string(Resolution);
+    if(HM) suffix += "_HM" + GSR + ".txt";
+    else suffix += GSR + ".txt";
+    std::string ofn = "output/envi_pdf_" + suffix;
+    std::string ofbn = "output/envi_xbin_" +suffix;
     std::ofstream ofs{ofn}, ofsbin{ofbn};
     if(!ofs || !ofsbin){
         std::cout << "openning file " << ofn << " and output/xbin.txt with error, Abort!" << std::endl;

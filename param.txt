@@ -5,12 +5,12 @@ Resolution                      10
 BaseType                        0 % _0_BSpline,_1_Daubechies
 
 %---Wavelet_phi_Genus
-phiGenus                        1
+phiGenus                        5
 SampRate                        1000
 
 %---Convolution_Kernel
 KernelFunc                      0 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-Ring:4-cylinder
-Radius                          40 % Mpc/h
+Radius                          50 % Mpc/h
 
 %---Main_Directory
 DIREC                           .
