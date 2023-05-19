@@ -216,6 +216,46 @@ std::vector<double> Daubechies_Phi(const int phiGenus)
     return phi;
 }
 
+//=======================================================================================
+// sfc of unweighted grid point
+//=======================================================================================
+double* sfc_grid_coordinate(std::vector<int64_t>& ps)
+{   
+    auto s = new double[GridVol]();         // density field coefficients in v_j space
+    
+    std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
+
+    double s_temp[phiSupport * phiSupport * phiSupport];
+    
+
+    #pragma omp parallel for reduction (+:s_temp)
+    for(size_t n = 0; n < ps.size(); ++n)
+    {
+        for(int ii = 0; ii < phiSupport * phiSupport * phiSupport; ++ii) s_temp[ii] = 0;
+        int64_t xx,yy,zz;
+        zz = ps[n]&(GridLen-1);
+        yy = (ps[n]&((GridLen-1)<<Resolution))>>Resolution;
+        xx = (ps[n]&((GridLen-1)<<(Resolution*2)))>>(Resolution*2);
+
+        for(int i = 0; i < phiSupport; ++i)
+            for(int j = 0; j < phiSupport; ++j)
+                for(int k = 0; k < phiSupport; ++k)
+                    s_temp[i*phiSupport*phiSupport + j*phiSupport + k] += phi[i * SampRate] * phi[j * SampRate] * phi[k * SampRate];
+    
+        for(int i = 0; i < phiSupport; ++i)
+            for(int j = 0; j < phiSupport; ++j)
+                for(int k = 0; k < phiSupport; ++k)
+                    s[((xx - i)&(GridLen - 1))*GridLen*GridLen + ((yy - j)&(GridLen - 1))*GridLen + ((zz - k)&(GridLen - 1))] +=
+                    s_temp[i*phiSupport*phiSupport + j*phiSupport + k];        
+    }
+
+    std::chrono::steady_clock::time_point end1 = std::chrono::steady_clock::now();
+    std::cout << "Time difference grid_sfc   = " 
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end1 - begin1).count()
+    << "[ms]" << std::endl;
+
+    return s;
+}
 
 //=======================================================================================
 //||||||||||||||| sfc3d (scaling function coefficients of density field) ||||||||||||||||
@@ -1187,6 +1227,28 @@ std::vector<int> web_classify(double** cxx, std::vector<Particle>& p)
     }
     return s;
 }
+
+// from Hessian to web structure on grid: 0-Voids, 1-sheets, 2-filaments, 3-knots
+std::vector<int> web_classify_to_grid(double** cxx)
+{
+    std::vector<int> s(GridVol);
+    #pragma omp parallel for
+    for(int64_t i = 0; i < GridLen; ++i)
+        for(int64_t j = 0; j < GridLen; ++j)
+            for(int64_t k = 0; k < GridLen; ++k)
+            {
+                int64_t x,y,z,l;   // BSpline have support [0,n+1],not centre in origin
+                x = (i - 1) & (GridLen - 1);   // shift -1 for CIC, which is corresponding to BSpline n=1
+                y = (j - 1) & (GridLen - 1);
+                z = (k - 1) & (GridLen - 1);
+                l = x * GridLen * GridLen + y * GridLen + z;
+                s[i * GridLen * GridLen + j * GridLen + k] = eigen_classify(cxx[1][l], cxx[2][l], cxx[3][l], cxx[4][l], cxx[5][l], cxx[6][l]);
+            }
+    return s;
+}
+
+
+
 
 
 double gaussian_radius_from_mass(double m_smooth) 

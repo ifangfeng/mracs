@@ -145,6 +145,7 @@ struct Offset
 void welcome();
 void read_parameter();
 double* sfc_offset(std::vector<Particle>& p, Offset v);
+double* sfc_grid_coordinate(std::vector<int64_t>& ps);
 double* sfc(std::vector<Particle>& p);
 std::vector<double> Daubechies_Phi(const int phiGenus);
 std::vector<double> B_Spline(const int n, const int sampleRate);
@@ -181,6 +182,7 @@ double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Pa
 double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vector<Particle>& p0);
 int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz);
 std::vector<int> web_classify(double** cxx, std::vector<Particle>& p);
+std::vector<int> web_classify_to_grid(double** cxx);
 double** tidal_tensor(fftw_complex* sc, double* w);
 std::vector<Particle> default_random_particle(double boxsize, size_t n);
 std::vector<Particle> generate_random_particle(int x, double L, double w);
