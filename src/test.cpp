@@ -1,44 +1,47 @@
+// *******************************************************
+// halo environment split and cross-correlation function
+// *******************************************************
 #include"mracs.h"
-
-std::string GSR {"_GSR5"};
 
 int main(){
     read_parameter();
-    std::string ifname {"output/envi_J10" + GSR + "_halo_Mcut2e12.txt"};
-    std::string ifnameGrid {"output/envi_J10" + GSR + "_halo_Mcut2e12_grid.txt"};
-    std::ifstream ifs {ifname}, ifsg {ifnameGrid};
-
-    std::vector<char> envi, envig; char temp{0}, comma{0};
-    while(ifs >> temp >> comma) envi.push_back(temp);
-    while(ifsg >> temp >> comma) envig.push_back(temp);
-
-    std::vector<int64_t> ps;
-    for(int64_t i = 0; i < GridVol; ++i)
-    {
-        if(envig[i] == '1') ps.push_back(i);
-    }
-    std::cout << static_cast<double>(ps.size())/GridVol << "\n";
-
-    auto s = sfc_grid_coordinate(ps);
-    std::cout << array_sum(s,GridVol) << " and " << ps.size() << "\n";
     
-}
+    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
+    auto p2 = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
-/*std::vector<int64_t> veci{0,5,8},vecj{5,7,1},veck{8,3,0};
-    for(auto i : veci)
-        for(auto j : vecj)
-            for(auto k : veck)
-            {
-                int64_t l = i * GridLen * GridLen + j * GridLen + k;
-                int64_t ri,rj,rk;
-                int64_t bi,bj,bk;
-                rk = l&(GridLen-1);
-                rj = ((l-rk)&(GridLen*GridLen-1))>>Resolution;
-                ri = ((l-rj*GridLen-rk)&(GridLen*GridLen*GridLen-1))>>(Resolution*2);
-                bk = l&(GridLen-1);
-                bj = (l&((GridLen-1)<<Resolution))>>Resolution;
-                bi = (l&((GridLen-1)<<(Resolution*2)))>>(Resolution*2);
-                std::cout << i << " " << j << " " << k << " ---> ";
-                std::cout << ri << " " << rj << " " << rk << " or ";
-                std::cout << bi << " " << bj << " " << bk << '\n';
-            }*/
+    int Nl {1};
+    int Nrl {Nl * Nl * Nl}; // number of realization
+    int NPW {3};   // number of element in set {<m,h>,<m,m>,<h,h>}
+    double Rs {2}; // Gaussian smoothing radius 
+
+    std::vector<std::vector<Particle>> dm(Nrl), hl(Nrl), vd(Nrl), st(Nrl), fl(Nrl), kt(Nrl);
+    std::vector<std::vector<std::vector<Particle>>> data {hl,vd,st,fl,kt};
+    std::cout << "marker++++++++++++++" << "\n";
+        std::cout << "x[0].size():" << data[0][0].size() << ", addr:" << &data[0][0] << "\n";
+            std::cout << "hl.size():" << hl[0].size() << ", addr:" << &hl[0] << "\n";
+    for(auto x : p1) dm[static_cast<int>(x.x/SimBoxL*Nl) * Nl * Nl + static_cast<int>(x.y/SimBoxL*Nl) * Nl + static_cast<int>(x.z/SimBoxL*Nl)].push_back(x);
+    for(auto x : p2) hl[static_cast<int>(x.x/SimBoxL*Nl) * Nl * Nl + static_cast<int>(x.y/SimBoxL*Nl) * Nl + static_cast<int>(x.z/SimBoxL*Nl)].push_back(x);
+
+    for(int i = 0; i < Nrl; ++i){
+        auto envi = environment(dm[i],Rs,hl[i]);
+        for(int j = 0; j < hl[i].size(); ++j){
+            if(envi[j] == 0) vd[i].push_back(hl[i][j]);
+            else if(envi[j] == 1) st[i].push_back(hl[i][j]);
+            else if(envi[j] == 2) fl[i].push_back(hl[i][j]);
+            else if(envi[j] == 3) kt[i].push_back(hl[i][j]);
+        }
+        if(i == 0){
+        std::cout << "dm: " << dm[i].size() << ", hl: " << hl[i].size() << ", vd: " << vd[i].size()
+        << ", st: " << st[i].size() << ", fl: " << fl[i].size() << ", kt: " << kt[i].size() << "\n";
+        }
+
+        for(int idx = 0;auto x : data){
+            if(idx == 0){
+            std::cout << x.size() << "\n";
+            std::cout << "x[0].size():" << x[0].size() << ", addr:" << &x[0] << "\n";
+            std::cout << "hl.size():" << hl[0].size() << ", addr:" << &hl[0] << "\n";
+            }
+            ++idx;
+        }
+    }
+}
