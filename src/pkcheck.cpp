@@ -8,14 +8,14 @@ int main()
     std::vector<double> var, var_th;
     auto p = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     auto s = sfc(p);
-    auto sc= sfc_r2c(s);
+    auto sc= sfc_r2c(s,false);
     for(auto R : R_vec){
         auto w = wfc(R,0);
         auto c = convol_c2r(sc,w);
-        var.push_back(inner_product(c,c,GridNum)/pow(p.size()*4./3*M_PI*pow(R/SimBoxL,3),2)/GridNum-1);
+        var.push_back(inner_product(c,c,GridVol)/pow(p.size()*4./3*M_PI*pow(R/SimBoxL,3),2)/GridVol-1);
     }
 
-    auto Pk = densityPowerDWT(s);
+    auto Pk = densityPowerDWT(sc);
     double itg{0};
     const double deltak{TWOPI/GridLen};
     double fr[GridLen/2];

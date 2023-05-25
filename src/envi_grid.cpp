@@ -6,7 +6,7 @@ using namespace std;
 
 int main(){
     read_parameter();
-    int GSR {5}; // Gaussian smoothing radius
+    int GSR {2}; // Gaussian smoothing radius
     std::string ofname {"output/envi_J" + std::to_string(Resolution)+ "_GSR"+std::to_string(GSR) +"_halo_Mcut2e12_grid.txt"};
     std::ofstream envirol {ofname};
 
@@ -16,7 +16,7 @@ int main(){
     force_base_type(0,1);
     force_kernel_type(2);
     auto s = sfc(p1);
-    auto sc = sfc_r2c(s);
+    auto sc = sfc_r2c(s,false);
     auto w = wft(GSR, 0);
 
     auto begin = std::chrono::steady_clock::now();

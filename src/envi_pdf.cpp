@@ -77,8 +77,7 @@ void prj_pdf_temp(std::vector<Particle>& p0, double* c, double R, double nf, dou
     double count[nbin]{0};
     double value[nbin]{0};
 
-    auto n_prj = project_value(c,p0);
-    delete[] c;
+    auto n_prj = project_value(c,p0,true);
 
     #pragma omp parallel for reduction (+:count)
     for(size_t i = 0; i < p0.size(); ++i) {

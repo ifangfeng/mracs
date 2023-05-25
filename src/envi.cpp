@@ -6,7 +6,7 @@ using namespace std;
 
 int main(){
     read_parameter();
-    int GSR {8}; // Gaussian smoothing radius
+    int GSR {2}; // Gaussian smoothing radius
     std::string ofname {"output/envi_J" + std::to_string(Resolution)+ "_GSR"+std::to_string(GSR) +"_halo_Mcut2e12.txt"};
     std::ofstream envirol {ofname};
 
@@ -16,8 +16,7 @@ int main(){
 
     force_base_type(0,1);
     force_kernel_type(2);
-    auto s = sfc(p1);
-    auto sc = sfc_r2c(s);
+    auto sc = sfc_r2c(sfc(p1),true);
     auto w = wft(GSR, 0);
     auto cxx = tidal_tensor(sc, w);
     auto env = web_classify(cxx,p2);

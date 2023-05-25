@@ -682,6 +682,54 @@ double* densityPowerDWT(fftw_complex* sc)
 //Pk[i] -= 1./pow(npart,1); // poission shot noise
 
 //=======================================================================================
+// calculate cross power spectrum of sc1 and sc2
+//=======================================================================================
+double* crossPowerDWT(fftw_complex* sc1, fftw_complex* sc2)
+{
+    const double npartsq = sc1[0][0] * sc2[0][0];
+    double* Pk_array = new double[(GridLen/2 + 1) * GridLen * GridLen];
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 + 1; ++k){
+                Pk_array[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k] = PowerPhi[i * (GridLen + 1) * (GridLen + 1) + j * (GridLen + 1) + k] *
+                sqrt((pow(sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + pow(sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2)) *
+                (pow(sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + pow(sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2)));
+            }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Pk power, T = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+
+    int64_t klen = GridLen;
+    int nk[klen]{0};
+    double* Pk = new double[klen]();
+    
+    for(size_t i = 0; i < GridLen ; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2+1; ++k)
+            {
+                int kM = sqrt(i * i + j * j + k * k);
+                if(kM < klen)
+                {
+                Pk[kM] += Pk_array[i * GridLen * (GridLen/2+1) + j * (GridLen/2+1) + k];
+                nk[kM] += 1;}
+            }
+    
+    delete[] Pk_array;
+
+    for(int i = 0; i < klen; ++i)
+    {
+        if(nk[i] != 0)
+        Pk[i] /= nk[i];
+        Pk[i] /= npartsq;
+        
+    }
+    Pk[0]=0;
+   
+    return Pk;
+}
+
+//=======================================================================================
 // calculate cross-correlation function c(k) of two density fileds in fourier space,
 // using mass assignment and FFT method. where k is a scalar.
 //=======================================================================================
@@ -1029,7 +1077,7 @@ double array_sum(double* w, size_t N)
     return sum;
 }
 
-fftw_complex* sfc_r2c(double* s)
+fftw_complex* sfc_r2c(double* s, bool DELETE_S)
 {
     if(!fftw_init_threads())
     {
@@ -1043,6 +1091,8 @@ fftw_complex* sfc_r2c(double* s)
 
     fftw_plan pl = fftw_plan_dft_r2c_3d(GridLen, GridLen, GridLen, s, sc, FFTW_MEASURE);
     fftw_execute(pl);
+
+    if(DELETE_S) delete[] s;
 
     return sc;
 }
@@ -1248,6 +1298,28 @@ std::vector<int> web_classify_to_grid(double** cxx)
 }
 
 
+// given dark matter fields dm and Gaussian smoothing radius Rs, return the web classify result at point p0
+std::vector<int> environment(std::vector<Particle>& dm, double Rs, std::vector<Particle>& p0)
+{
+    force_base_type(0,1);
+    force_kernel_type(2);
+    auto begin = std::chrono::steady_clock::now();
+
+    auto sc = sfc_r2c(sfc(dm),true);
+    auto w = wft(2, 0);
+    auto cxx = tidal_tensor(sc, w);
+    auto env = web_classify(cxx,p0);
+    
+    fftw_free(sc);
+    delete[] w;
+
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "Time difference EnvironmentClassify  = "
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+    << "[ms]" << std::endl;
+
+    return env;
+}
 
 
 
@@ -1279,10 +1351,10 @@ double* convol3d(double* s, double* w)
 {
     auto begin3 = std::chrono::steady_clock::now();
 
-    auto sc = sfc_r2c(s);
+    auto sc = sfc_r2c(s,false);
     auto c = convol_c2r(sc, w);
-    auto end3 = std::chrono::steady_clock::now();
 
+    auto end3 = std::chrono::steady_clock::now();
     std::cout << "Time difference 3 convl3d  = "
     << std::chrono::duration_cast<std::chrono::milliseconds>(end3 - begin3).count()
     << "[ms]" << std::endl;
@@ -1362,15 +1434,11 @@ double* prj_grid(const double* s)
 }
 
 
-double* project_value(const double* s, std::vector<Particle>& p0)
+double* project_value(const double* s, std::vector<Particle>& p0, bool DELETE_S)
 {
     const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
 
     auto begin4 = std::chrono::steady_clock::now();
-
-    std::vector<int> step(phiSupport);
-    for(int i = 0; i < phiSupport; ++i)
-        step[i] = i * SampRate;
 
     auto result = new double[p0.size()];
     double sum {0};
@@ -1390,7 +1458,7 @@ double* project_value(const double* s, std::vector<Particle>& p0)
                 for(int k = 0; k < phiSupport; ++k)
                 {
                     sum += s[((xxc-i) & (GridLen-1)) * GridLen * GridLen + ((yyc-j) & (GridLen-1)) * GridLen + ((zzc-k) & (GridLen-1))]
-                            * phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]];
+                            * phi[xxf + i * SampRate] * phi[yyf + j * SampRate] * phi[zzf + k * SampRate];
                 }
 
         result[n] = sum;
@@ -1401,6 +1469,8 @@ double* project_value(const double* s, std::vector<Particle>& p0)
     std::cout << "Time difference 4 interpret = "
     << std::chrono::duration_cast<std::chrono::milliseconds>(end4 - begin4).count()
     << "[ms]" << std::endl;
+
+    if(DELETE_S) delete[] s;
 
     return result;
 }
@@ -1574,8 +1644,7 @@ void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double 
     double mmt1[nbin]{0};
     double mmt2[nbin]{0};
     double mmt3[nbin]{0};
-    auto n_prj = project_value(c,p0);
-    delete[] c;
+    auto n_prj = project_value(c,p0,true);
 
     #pragma omp parallel for reduction (+:count)
     for(size_t i = 0; i < p0.size(); ++i) {

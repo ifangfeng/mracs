@@ -40,33 +40,17 @@ int main(){
         auto w = wfc(R,0);
         for(int i = 0; i < vecP.size(); ++i){
             auto c = convol3d(svec[i],w);
-            auto n = project_value(c,p0);
+            auto n = project_value(c,p0,true);
             double cicexpect = static_cast<double>(vecP[i].size())/GridVol;
             std::string ofname = prefix + fname[i] +"_R" + std::to_string((int)R) + "_J" + std::to_string(Resolution) + suffix;
             std::ofstream ofs {ofname};
             for(size_t j = 0; j < p0.size(); ++j) ofs << n[j]/cicexpect << ", ";
-            delete[] c;
             delete[] n;
         }
-        
     }
 }
 
-/*
-auto s_st = sfc(sheets);
-        auto s_fl = sfc(filaments);
-        auto s_kt = sfc(knots);
-        auto s_dm = sfc(p1);
-        auto w = wfc(R,0);
-        auto c_st = convol3d(s_st,w);
-        auto c_fl = convol3d(s_fl,w);
-        auto c_kt = convol3d(s_kt,w);
-        auto c_dm = convol3d(s_dm,w);
-        auto n_st = project_value(c_st,p0);
-        auto n_fl = project_value(c_fl,p0);
-        auto n_kt = project_value(c_kt,p0);
-        auto n_dm = project_value(c_dm,p0);
-*/
+
 
 // c is cic counting result, n is prj result, rhomin and rhomax could be 0, 5 respectively
 void cp_temp_dispersion(std::vector<int64_t>& c, double* n, double rhomin, double rhomax, double cicexpect, std::string ofname)

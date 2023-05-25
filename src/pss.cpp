@@ -6,8 +6,8 @@ int main()
     read_parameter();
     auto p = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto s = sfc(p);
-    auto sc= sfc_r2c(s);
-    auto Pk = densityPowerDWT(s);
+    auto sc= sfc_r2c(s,false);
+    auto Pk = densityPowerDWT(sc);
 
     const int NumH{3}, NumD{1}; // shape: H/D; 
     const double Hmin{10}, Dmin{100}, Hmax{100}, Dmax{100};
@@ -51,7 +51,7 @@ int main()
             auto w = wfc(D/2,H);
             auto c = convol_c2r(sc,w);
             var.push_back(inner_product(c,c,GridVol) * GridVol/pow(p.size(), 2) - 1);
-            auto pk = densityPowerDWT(c);
+            auto pk = densityPowerDWT(sc);
             double itg{0};
             for(size_t i = 0; i < pow((GridLen/2),3); ++i) itg += pk[i];
             var_th2.push_back(itg);

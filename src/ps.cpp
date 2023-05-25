@@ -32,7 +32,8 @@ void density_power(int a, int n, std::vector<Particle> p)
 {
     force_base_type(a, n);
     auto s = sfc(p);
-    double* Pk_grid     = densityPowerFFT(s);
-    double* Pk_gridFree = densityPowerDWT(s);
+    auto sc= sfc_r2c(s,false);
+    double* Pk_grid     = densityPowerFFT(sc);
+    double* Pk_gridFree = densityPowerDWT(sc);
     print_and_clear(Pk_grid, Pk_gridFree, s, a, n);
 }
