@@ -6,7 +6,7 @@
 int main(){
     read_parameter();
     
-    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
+    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub05.bin");
     auto p2 = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
     int Nl {4};
@@ -21,7 +21,7 @@ int main(){
 
 
     std::vector<std::vector<Particle>> dm(Nrl), hl(Nrl), vd(Nrl), st(Nrl), fl(Nrl), kt(Nrl);
-    std::vector<std::vector<std::vector<Particle>>> data {hl,vd,st,fl,kt};
+    std::vector<std::vector<std::vector<Particle>>*> data {&hl,&vd,&st,&fl,&kt};
     std::vector<double> column(GridLen,0);
     std::vector<std::vector<double>> pw2d(NPW,column);   // power and cross power of dm and halo
     std::vector<std::vector<std::vector<double>>> pw(data.size(),pw2d);
@@ -42,7 +42,7 @@ int main(){
         auto sc = sfc_r2c(sfc(dm[i]),true);
         pt[0] = densityPowerDWT(sc);
         for(int index = 0; auto x : data){
-            auto sc1 = sfc_r2c(sfc(x[i]),true);
+            auto sc1 = sfc_r2c(sfc((*x)[i]),true);
             pt[1] = densityPowerDWT(sc1);
             pt[2] = crossPowerDWT(sc,sc1);
 

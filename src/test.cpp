@@ -14,11 +14,22 @@ int main(){
     int NPW {3};   // number of element in set {<m,h>,<m,m>,<h,h>}
     double Rs {2}; // Gaussian smoothing radius 
 
+    std::vector<int> ita(3),itb(3),itc(3);
+    std::vector<std::vector<int>> vit {ita,itb,itc};
+    for(int i = 0; i < 3; ++i){
+        ita[i] = 2*i +1;
+        itb[i] = i;
+        itc[i] = 3*i -1;
+    }
+    std::cout << "marker++++++++++++++=======" << "\n";
+    for(auto x : vit){
+        std::cout << x[0] << ", " << x[1] << ", " << x[2] << "\n";
+    }
     std::vector<std::vector<Particle>> dm(Nrl), hl(Nrl), vd(Nrl), st(Nrl), fl(Nrl), kt(Nrl);
     std::vector<std::vector<std::vector<Particle>>> data {hl,vd,st,fl,kt};
     std::cout << "marker++++++++++++++" << "\n";
-        std::cout << "x[0].size():" << data[0][0].size() << ", addr:" << &data[0][0] << "\n";
-            std::cout << "hl.size():" << hl[0].size() << ", addr:" << &hl[0] << "\n";
+        std::cout << "x[0].size():" << data[0][0].size() << ", addr:" << &data[0] << "\n";
+            std::cout << "hl.size():" << hl[0].size() << ", addr:" << &hl << "\n";
     for(auto x : p1) dm[static_cast<int>(x.x/SimBoxL*Nl) * Nl * Nl + static_cast<int>(x.y/SimBoxL*Nl) * Nl + static_cast<int>(x.z/SimBoxL*Nl)].push_back(x);
     for(auto x : p2) hl[static_cast<int>(x.x/SimBoxL*Nl) * Nl * Nl + static_cast<int>(x.y/SimBoxL*Nl) * Nl + static_cast<int>(x.z/SimBoxL*Nl)].push_back(x);
 
@@ -38,8 +49,8 @@ int main(){
         for(int idx = 0;auto x : data){
             if(idx == 0){
             std::cout << x.size() << "\n";
-            std::cout << "x[0].size():" << x[0].size() << ", addr:" << &x[0] << "\n";
-            std::cout << "hl.size():" << hl[0].size() << ", addr:" << &hl[0] << "\n";
+            std::cout << "x[0].size():" << x[0].size() << ", addr:" << &x << "\n";
+            std::cout << "hl.size():" << hl[0].size() << ", addr:" << &hl << "\n";
             }
             ++idx;
         }
