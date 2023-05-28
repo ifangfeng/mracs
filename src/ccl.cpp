@@ -16,11 +16,8 @@ int main()
     std::cout << "halo: " << p2.size() << std::endl;
     //#################################################
 
-    auto s1 = sfc(p1);
-    auto s2 = sfc(p2);
-
-    auto sc1 = sfc_r2c(s1); delete[] s1;
-    auto sc2 = sfc_r2c(s2); delete[] s2;
+    auto sc1 = sfc_r2c(sfc(p1),true);
+    auto sc2 = sfc_r2c(sfc(p2),true);
 
     auto ccf  = densityCorrelationDWT(sc1, sc2);
     auto acf1 = densityCorrelationDWT(sc1, sc1);

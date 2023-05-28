@@ -265,17 +265,10 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
     const double ScaleFactor {GridLen/SimBoxL};   //used to rescale particle coordinates
     
     double total {0};
-    #ifdef IN_PARALLEL
+
     #pragma omp parallel for reduction (+:total)
-    #endif
     for(auto x : p) total += x.weight;
     total /= p.size();
-
-    std::vector<int> step(phiSupport);
-    for(int i = 0; i < phiSupport; ++i)
-    {
-        step[i] = i * SampRate;
-    }
 
     auto s = new double[GridVol]();         // density field coefficients in v_j space
 
@@ -283,10 +276,7 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
 
     double s_temp[phiSupport * phiSupport * phiSupport];
 
-    #ifdef IN_PARALLEL
     #pragma omp parallel for reduction (+:s_temp)
-    #endif
-    
     for(size_t n = 0; n < p.size(); ++n)
     {
         for(int ii = 0; ii < phiSupport * phiSupport * phiSupport; ++ii) s_temp[ii] = 0;
@@ -306,7 +296,7 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
                 for(int k = 0; k < phiSupport; ++k)
                 {
                     s_temp[i*phiSupport*phiSupport + j*phiSupport + k] += 
-                    phi[xxf + step[i]] * phi[yyf + step[j]] * phi[zzf + step[k]] * p[n].weight / total;
+                    phi[xxf + i * SampRate] * phi[yyf + j * SampRate] * phi[zzf + k * SampRate] * p[n].weight / total;
                 }
         for(int i = 0; i < phiSupport; ++i)
             for(int j = 0; j < phiSupport; ++j)

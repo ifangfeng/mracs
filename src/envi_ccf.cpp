@@ -6,13 +6,13 @@
 int main(){
     read_parameter();
     
-    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub05.bin");
+    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
     auto p2 = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
     int Nl {4};
     int Nrl {Nl * Nl * Nl}; // number of realization
     int NPW {3};   // number of element in set {<m,h>,<m,m>,<h,h>}
-    double Rs {2}; // Gaussian smoothing radius 
+    double Rs {5}; // Gaussian smoothing radius 
     
     std::vector<std::string> filename {"hl","vd","st","fl","kt"};
     std::string GSR {"_GSR" + std::to_string((int)Rs)};
