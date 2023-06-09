@@ -156,6 +156,7 @@ double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k)
 double* densityPowerFFT(fftw_complex* sc);
 double* densityPowerDWT(fftw_complex* sc);
 double* crossPowerDWT(fftw_complex* sc1, fftw_complex* sc2);
+double* densityCovarianceArray(fftw_complex* sc1,fftw_complex* sc2);
 double* densityVarianceArray(fftw_complex* sc);
 double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2);
 double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2);
@@ -164,7 +165,7 @@ double* symmetryFold_lean(double* wA);
 double* windowArray(const double Radius, const double theta);
 double* wft(const double Radius, const double theta);
 double* wfc(const double Radius, const double theta);
-double* convol3d(double* s, double* w);
+double* convol3d(double* s, double* w, bool DELETE_S);
 double* convol_c2r(fftw_complex* sc, double* w);
 fftw_complex* sfc_r2c(double* s, bool DELETE_S);
 fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
@@ -175,7 +176,7 @@ double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int
 void force_resoluton_J(int j);
 void force_kernel_type(int x);
 void force_base_type(int a, int n);
-double* prj_grid(const double* s);
+double* prj_grid(const double* s, bool DELETE_S);
 double* project_value(const double* s, std::vector<Particle>& p0, bool DELETE_S);
 void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result);
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);

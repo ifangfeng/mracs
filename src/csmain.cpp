@@ -477,6 +477,9 @@ double* windowArray(const double Radius, const double theta)
     return WindowArray;
 }
 
+// return the covariance or variance of density field smoothed by a window w(Radius,theta),
+// pk_plus is returned by densityCovarianceArray or densityVarianceArray, 
+// when covarianceArray is the case, this function returns the covariance.
 double var_CombinewithKernel(double* pk_plus, const double Radius, const double theta)
 {
     auto WindowPk = windowArray(Radius,theta);
@@ -545,8 +548,8 @@ double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int
 
 
 
-// given the sfc array, caluculate its raw variance array i.e. no window smoothing
-double* densityVarianceArray(fftw_complex* sc)
+// given the sfc array, caluculate its raw covariance array i.e. no window smoothing
+double* densityCovarianceArray(fftw_complex* sc1,fftw_complex* sc2)
 {
     auto Pk_array = new double[GridVol];
     #pragma omp parallel for
@@ -555,8 +558,8 @@ double* densityVarianceArray(fftw_complex* sc)
             for(size_t k = 0; k < GridLen/2 + 1; ++k)
             {
                 Pk_array[i * GridLen * GridLen + j * GridLen + k] = 
-                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + 
-                pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2);
+                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0]
+                + sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * sc2[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1];
             }
     
     #pragma omp parallel for
@@ -580,6 +583,13 @@ double* densityVarianceArray(fftw_complex* sc)
     
     return Pk_plus;
 }
+
+// given the sfc array, caluculate its raw variance array i.e. no window smoothing
+double* densityVarianceArray(fftw_complex* sc)
+{
+    return densityCovarianceArray(sc,sc);
+}
+
 
 //=======================================================================================
 // particles first assigned to grid using different window function, then we can take
@@ -1337,7 +1347,7 @@ fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2)
 // s and w are 3d Real array, s in physical space while w in frequency space, return 
 // as double* c , convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J
 //=======================================================================================
-double* convol3d(double* s, double* w)
+double* convol3d(double* s, double* w, bool DELETE_S)
 {
     auto begin3 = std::chrono::steady_clock::now();
 
@@ -1350,6 +1360,8 @@ double* convol3d(double* s, double* w)
     << "[ms]" << std::endl;
 
     fftw_free(sc);
+    if(DELETE_S) delete[] s;
+
     return c;
 }
 
@@ -1399,7 +1411,7 @@ void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<do
 }
 
 // projected value at each grid point
-double* prj_grid(const double* s)
+double* prj_grid(const double* s, bool DELETE_S)
 {
     auto a = new double[GridVol];
 
@@ -1419,6 +1431,8 @@ double* prj_grid(const double* s)
                 a[x * GridLen * GridLen + y * GridLen + z] = sum;
                 sum = 0;
             }
+            
+    if(DELETE_S) delete[] s;
 
     return a;
 }
