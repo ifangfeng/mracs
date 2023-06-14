@@ -21,14 +21,18 @@ int main(){
 
     auto sc_dms = sfc_r2c(sfc(dms),true);
     auto sc_hls = sfc_r2c(sfc(hls),true);
-    auto pk_plus0_s = densityCovarianceArray(sc_dms,sc_hls);
+    auto pk_plus0_s_mh = densityCovarianceArray(sc_dms,sc_hls);
+    auto pk_plus0_s_hh = densityCovarianceArray(sc_hls,sc_hls);
+    auto pk_plus0_s_mm = densityCovarianceArray(sc_dms,sc_dms);
     std::vector<double> ccrs, ccr; // cross-correlation coefficient of different smoothing Radius
     for(auto r : vec_R){
-        ccrs.push_back(var_CombinewithKernel(pk_plus0_s,r,0));
+        ccrs.push_back(covar_CombinewithKernel(pk_plus0_s_mh,r,0)/sqrt(covar_CombinewithKernel(pk_plus0_s_hh,r,0) * covar_CombinewithKernel(pk_plus0_s_mm,r,0)));
     }
     fftw_free(sc_dms);
     fftw_free(sc_hls);
-    delete[] pk_plus0_s;
+    delete[] pk_plus0_s_mh;
+    delete[] pk_plus0_s_hh;
+    delete[] pk_plus0_s_mm;
 
     std::vector<Particle> dm,hl,vd,st,fl,kt;
     std::vector<std::vector<Particle>*> vpt {&dm,&hl,&vd,&st,&fl,&kt};
@@ -53,12 +57,17 @@ int main(){
     auto sc_fl = sfc_r2c(sfc(fl),true);
     auto sc_kt = sfc_r2c(sfc(kt),true);
 
-    auto pk_plus0 = densityCovarianceArray(sc_dm,sc_hl);
+    auto pk_plus0_mh = densityCovarianceArray(sc_dm,sc_hl);
+    auto pk_plus0_hh = densityCovarianceArray(sc_hl,sc_hl);
+    auto pk_plus0_mm = densityCovarianceArray(sc_dm,sc_dm);
+    std::vector<double> covar_mm;
     for(auto r : vec_R){
-        ccr.push_back(var_CombinewithKernel(pk_plus0,r,0));
+        double mm = covar_CombinewithKernel(pk_plus0_mm,r,0);
+        covar_mm.push_back(mm);
+        ccr.push_back(covar_CombinewithKernel(pk_plus0_mh,r,0)/sqrt());
     }
     fftw_free(sc_hl);
-    delete[] pk_plus0;
+    delete[] pk_plus0_mh;
 
     for(int i = 0; i < vec_R.size(); ++i) std::cout << ccrs[i] << ", ";std::cout << std::endl;
     for(int i = 0; i < vec_R.size(); ++i) std::cout << ccr[i]  << ", ";std::cout << std::endl;

@@ -1,4 +1,5 @@
 #include<fftw3.h>
+#include<mkl.h>
 #include<mkl_dfti.h>
 #include<iostream>
 #include<fstream>
@@ -143,6 +144,8 @@ struct Offset
 
 // defined in mracs.cpp
 void welcome();
+std::vector<double> log_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT);
+std::vector<double> linear_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT);
 void read_parameter();
 double* sfc_offset(std::vector<Particle>& p, Offset v);
 double* sfc_grid_coordinate(std::vector<int64_t>& ps);
@@ -171,7 +174,8 @@ fftw_complex* sfc_r2c(double* s, bool DELETE_S);
 fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
 double array_sum(double* w, size_t N);
 double inner_product(double* v0, double* v1, size_t N);
-double var_CombinewithKernel(double* pk_plus, const double Radius, const double theta);
+double *window_Pk(const double Radius, const double theta);
+double covar_CombinewithKernel(double* pk_plus, double* WinPk);
 double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int FINE);
 void force_resoluton_J(int j);
 void force_kernel_type(int x);

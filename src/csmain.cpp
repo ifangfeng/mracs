@@ -13,6 +13,24 @@ void welcome()
     std::cout << "---------------------------------------------------" << std::endl;
     
 }
+std::vector<double> log_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT)
+{
+    if(Rmin <= 0) {std::cout << "input error, Rmin should be positive number\n";std::terminate();}
+    std::vector<double> r(Npt);
+    for(int i = 0; i < Npt; ++i) r[i] = Rmin * pow(Rmax/Rmin, static_cast<double>(i)/Npt);
+    if(ENDPOINT) r.push_back(Rmax);
+
+    return r;
+}
+
+std::vector<double> linear_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT)
+{
+    std::vector<double> r(Npt);
+    for(int i = 0; i < Npt; ++i) r[i] = Rmin + i * (Rmax - Rmin) / Npt;
+    if(ENDPOINT) r.push_back(Rmax);
+
+    return r;
+}
 
 void read_parameter()
 {
@@ -478,14 +496,10 @@ double* windowArray(const double Radius, const double theta)
 }
 
 // return the covariance or variance of density field smoothed by a window w(Radius,theta),
-// pk_plus is returned by densityCovarianceArray or densityVarianceArray, 
-// when covarianceArray is the case, this function returns the covariance.
-double var_CombinewithKernel(double* pk_plus, const double Radius, const double theta)
+// pk_plus is returned by densityCovarianceArray or densityVarianceArray, WinPk is returned by window_Pk
+// when covarianceArray is the case, covar_CombinewithKernel() returns the covariance.
+double covar_CombinewithKernel(double* pk_plus, double* WinPk)
 {
-    auto WindowPk = windowArray(Radius,theta);
-    #pragma omp paraller for
-    for(size_t i = 0; i < (GridLen+1)*(GridLen+1)*(GridLen+1); ++i) WindowPk[i] = pow(WindowPk[i], 2);
-    
     double sum{0};
     #pragma omp parallel for reduction (+: sum)
     for(int64_t i = 1 - GridLen; i < GridLen; ++i)
@@ -493,11 +507,21 @@ double var_CombinewithKernel(double* pk_plus, const double Radius, const double 
             for(int64_t k = 1 - GridLen; k < GridLen; ++k)
             {
                 sum += pk_plus[(i+GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (j+GridLen-1) * (2*GridLen-1) + (k+GridLen-1)] *
-                WindowPk[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
+                WinPk[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
             }
-    double temp = pk_plus[(GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (GridLen-1) * (2*GridLen-1) + (GridLen-1)] * WindowPk[0];
+    double temp = pk_plus[(GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (GridLen-1) * (2*GridLen-1) + (GridLen-1)] * WinPk[0];
 
     return sum/temp-1;
+}
+
+// Power of window function W(Radius,theta)
+double *window_Pk(const double Radius, const double theta)
+{
+    auto winPk = windowArray(Radius,theta);
+    #pragma omp paraller for
+    for(size_t i = 0; i < (GridLen+1)*(GridLen+1)*(GridLen+1); ++i) winPk[i] = pow(winPk[i], 2);
+    
+    return winPk;
 }
 
 // FINE is integral finer parameter and takes value from set {0,1,2,3,4,5}

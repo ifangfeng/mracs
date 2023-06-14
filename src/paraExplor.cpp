@@ -29,7 +29,7 @@ std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
 
     auto pk_plus = densityCovarianceArray(sc_dm,sc_hl);
     for(auto r : vec_R){
-            cv_pk.push_back(var_CombinewithKernel(pk_plus,r,0));
+            cv_pk.push_back(covar_CombinewithKernel(pk_plus,r,0));
         }
 
 std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();

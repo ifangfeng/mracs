@@ -26,7 +26,7 @@ std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
     auto pk_plus = densityVarianceArray(sc);
     for(auto H : Hvec)
         for(auto D : Dvec){
-            var_pk.push_back(var_CombinewithKernel(pk_plus,D/2,H));
+            var_pk.push_back(covar_CombinewithKernel(pk_plus,D/2,H));
         }
 
 std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();

@@ -15,9 +15,13 @@ int main(){
     std::vector<int> envi;int temp{0}; char comma{0};
     while(ifs >> temp >> comma) envi.push_back(temp);
     if(hl.size() == envi.size()) std::cout << "halo size matched! continue\n"; else std::terminate();
+    std::vector<double> npartenvi(4,0);
+    for(auto x : envi) npartenvi[x]++;
+    double sum{0};
+    for(auto x : npartenvi) {std::cout << x << ", ";sum+=x;} std::cout << sum << std::endl;
     std::vector<Particle> hlw;
     for(size_t i = 0; i < envi.size(); ++i){
-        hlw.push_back({hl[i].x,hl[i].y,hl[i].z,we[envi[i]]});
+        hlw.push_back({hl[i].x,hl[i].y,hl[i].z,we[envi[i]]*npartenvi[envi[i]]});
     }
 
     const double R0{1},R1{125};
