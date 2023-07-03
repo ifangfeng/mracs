@@ -63,7 +63,7 @@ std::vector<std::vector<Particle>> halo_mass_split(std::vector<Particle>& hl, in
         else if(hl[i].weight < hl[min_id].weight)
             min_id = i;
     }
-    const size_t MAXID{max_id}, MINID{min_id};
+    const size_t MAXID{maximum_index(hl)}, MINID{min_id};
     const double DELTA_MASS{hl[MAXID].weight - hl[MINID].weight};
     size_t dx = hl.size() / nbin;
     const int INITIAL{10}, REFINE{1000};
@@ -91,18 +91,48 @@ std::vector<std::vector<Particle>> halo_mass_split(std::vector<Particle>& hl, in
     }
 }
 
-
-// *******************************************************
-// derect sort of double vector, return as ascend index
-// notice the original vector will be modified
-// *******************************************************
-std::vector<int> limited_sort(std::vector<double>& vec)
+std::vector<size_t> proto_sort(std::vector<double>& vec, int nbin)
 {
-    std::vector<int> sortedID;
-    int max_id = maximum_index(vec);
+    auto max_id = maximum_index(vec);
+    auto min_id = minimum_index(vec);
+
+    double MAX{vec[max_id]}, MIN{vec[min_id]};
+    double DELTA{MAX - MIN};
+    const int REFINE{100};
+    const size_t LINSIZE{vec.size() < 1e9 ? vec.size() * REFINE : vec.size()};
+
+    auto count = new int[LINSIZE](0);
+    for(size_t i = 0; i < vec.size(); ++i){
+        size_t idx = (vec[i] - MIN) / DELTA * LINSIZE;
+        ++count[idx];
+    }
+
+    double sum{0};
+    size_t node_id{0}, finer_id{0};
+    const size_t dx {vec.size()/nbin};
+
+    for(size_t i = 0; i < LINSIZE; ++i){
+        sum += count[i];
+        if(sum >= dx) 
+        {   
+            node_id = i;
+            break;
+        }
+    }
+    finer_id =  dx - (sum - count[node_id]);
+}
+
+// -------------------------------------------------------
+// direct sort of double vector, return as ascend index
+// notice the original vector will be modified
+// -------------------------------------------------------
+std::vector<size_t> limited_sort(std::vector<double>& vec)
+{
+    std::vector<size_t> sortedID;
+    size_t max_id = maximum_index(vec);
     const double MAX{vec[max_id]};
-    for(int i = 0; i < vec.size() - 1; ++i){
-        int id = minimum_index(vec);
+    for(size_t i = 0; i < vec.size() - 1; ++i){
+        size_t id = minimum_index(vec);
         vec[id] = MAX;
         sortedID.push_back(id);
     }
@@ -111,19 +141,19 @@ std::vector<int> limited_sort(std::vector<double>& vec)
     return sortedID;
 }
 
-int minimum_index(std::vector<double>& v)
+size_t minimum_index(std::vector<double>& v)
 {
-    int idx{0};
-    for(int i = 0; i < v.size(); ++i){
+    size_t idx{0};
+    for(size_t i = 0; i < v.size(); ++i){
         if(v[i] < v[idx]) idx = i;
     }
     return idx;
 }
 
-int maximum_index(std::vector<double>& v)
+size_t maximum_index(std::vector<double>& v)
 {
-    int idx{0};
-    for(int i = 0; i < v.size(); ++i){
+    size_t idx{0};
+    for(size_t i = 0; i < v.size(); ++i){
         if(v[i] > v[idx]) idx = i;
     }
     return idx;
