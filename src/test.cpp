@@ -6,7 +6,8 @@
 int main(){
     read_parameter();
     
-    std::vector<double> we{-8.81084, 0.0134186, 0.751282, 1}; //weight
+    //std::vector<double> we{-8.81084, 0.0134186, 0.751282, 1}; //weight
+    std::vector<double> we{-0.973741, 0.00269408, 0.136522, 0.182164}; //weight
     auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto hl = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     std::string ifname {"output/envi_J10_GSR3_halo_Mcut2e12.txt"};

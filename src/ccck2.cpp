@@ -9,6 +9,7 @@ double* fourier_mode_correlation
 int main(){
     read_parameter();
     
+    std::vector<double> we{-0.973741, 0.00269408, 0.136522, 0.182164}; //weight
     auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto halo = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     std::string ifname {"output/envi_J10_GSR5_halo_Mcut2e12.txt"};
@@ -17,9 +18,11 @@ int main(){
     std::vector<int> envi;int temp{0}; char comma{0};
     while(ifs >> temp >> comma) envi.push_back(temp);
     if(halo.size() == envi.size()) std::cout << "halo size matched! continue\n"; else std::terminate();
+    std::vector<double> npartenvi(4,0);
+    for(auto x : envi) npartenvi[x]++;
     std::vector<Particle> p2;
     for(size_t i = 0; i < envi.size(); ++i){
-        if(envi[i] == 1) p2.push_back(halo[i]);
+        p2.push_back({halo[i].x,halo[i].y,halo[i].z,we[envi[i]]*npartenvi[envi[i]]});
     }
 
     int Nl {4};
@@ -41,11 +44,11 @@ int main(){
         j = x.y/SimBoxL;
         k = x.z/SimBoxL;
         hl[i * Nl * Nl + j * Nl + k]
-        .push_back({x.x - i * SimBoxL, x.y - j * SimBoxL, x.z - k * SimBoxL, 1.});
+        .push_back({x.x - i * SimBoxL, x.y - j * SimBoxL, x.z - k * SimBoxL, x.weight});
     }
 
     //std::ofstream ofs0 {"output/data0.txt"};
-    std::ofstream ofs1 {"output/ccc_st_GSR3.dat"};
+    std::ofstream ofs1 {"output/data1.txt"};
 
     //force_base_type(0,1);
     //auto r0 = fourier_mode_correlation(dm, hl);

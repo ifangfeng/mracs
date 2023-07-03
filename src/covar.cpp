@@ -19,7 +19,7 @@ int main(){
     std::vector<fftw_complex*> vec_sc;
     for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
 
-    double rmin{Radius},rmax{100}; 
+    double rmin{100},rmax{100}; 
     auto vecR = log_scale_generator(rmin,rmax,1,false);
     std::vector<double*> vec_wpk; for(auto r : vecR) vec_wpk.push_back(window_Pk(r,0));
     
@@ -139,8 +139,8 @@ int main(){
     double aa = covar_CombinewithKernel(densityCovarianceArray(sc,sc),vec_wpk[0]);
 
     std::cout << "r(reconstruct): " << ab/sqrt(aa * cov[0]) << std::endl;
-/*
 
+/*
     auto p0 = default_random_particle(SimBoxL,1000*10);
     auto win = wfc(Radius,0);
     auto n = project_value(convol_c2r(sc,win),p0,true);
