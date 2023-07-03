@@ -47,3 +47,84 @@ std::vector<double> fourier_mode_correlation_1rlz(std::vector<Particle>& dm, std
 
     return cross;
 }
+
+std::vector<std::vector<Particle>> density_split(std::vector<Particle>& hl, double R, int T, int Nbin)
+{
+
+}
+
+std::vector<std::vector<Particle>> halo_mass_split(std::vector<Particle>& hl, int nbin)
+{
+    size_t max_id{0}, min_id{0};
+
+    for(size_t i = 0; i < hl.size(); ++i){
+        if (hl[i].weight > hl[max_id].weight) 
+            max_id = i;
+        else if(hl[i].weight < hl[min_id].weight)
+            min_id = i;
+    }
+    const size_t MAXID{max_id}, MINID{min_id};
+    const double DELTA_MASS{hl[MAXID].weight - hl[MINID].weight};
+    size_t dx = hl.size() / nbin;
+    const int INITIAL{10}, REFINE{1000};
+    const size_t LINSIZE{hl.size() < 1e10 ? INITIAL * hl.size() : hl.size()};
+    int* count = new int[LINSIZE](0);
+
+    for(size_t i = 0; i < hl.size(); ++i){
+        size_t idx = (hl[i].weight - hl[MINID].weight)/DELTA_MASS * LINSIZE;
+        ++count[idx];
+    }
+    double node[nbin-1](0);
+    size_t tmp{0};
+    size_t sum{0};
+    for(size_t i = 0; i < LINSIZE; ++i){
+        sum += count[i];
+        if(sum >= hl.size()/nbin){
+            tmp = i;
+            break;
+        }
+    }
+    std::vector<double> nodePart;
+    for(size_t i = 0; i < hl.size(); ++i){
+        size_t idx = (hl[i].weight - hl[MINID].weight)/DELTA_MASS * LINSIZE;
+        if(idx = tmp) nodePart.push_back(hl[i].weight);
+    }
+}
+
+
+// *******************************************************
+// derect sort of double vector, return as ascend index
+// notice the original vector will be modified
+// *******************************************************
+std::vector<int> limited_sort(std::vector<double>& vec)
+{
+    std::vector<int> sortedID;
+    int max_id = maximum_index(vec);
+    const double MAX{vec[max_id]};
+    for(int i = 0; i < vec.size() - 1; ++i){
+        int id = minimum_index(vec);
+        vec[id] = MAX;
+        sortedID.push_back(id);
+    }
+    sortedID.push_back(max_id);
+
+    return sortedID;
+}
+
+int minimum_index(std::vector<double>& v)
+{
+    int idx{0};
+    for(int i = 0; i < v.size(); ++i){
+        if(v[i] < v[idx]) idx = i;
+    }
+    return idx;
+}
+
+int maximum_index(std::vector<double>& v)
+{
+    int idx{0};
+    for(int i = 0; i < v.size(); ++i){
+        if(v[i] > v[idx]) idx = i;
+    }
+    return idx;
+}
