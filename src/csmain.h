@@ -17,11 +17,13 @@
 #define TWOPI M_PI*2
 #endif
 
-#define IN_PARALLEL
-
 #ifndef PARAMETERS_NUM
 #define PARAMETERS_NUM 10
 #endif
+
+#ifndef MRACS_MAIN
+#define MRACS_MAIN
+
 
 extern int Resolution;                    // MRA scale parameter J
 extern int BaseType;                      // 0 for B_Spline, 1 for Daubechies phi
@@ -40,72 +42,7 @@ extern std::string RADII;
 extern std::string GENUS;
 extern std::string DataDirec;
 extern std::vector<double> phi;
-
-// kernel function declared
-double WindowFunction_Shell(double R, double ki, double kj, double kk);
-double WindowFunction_Sphere(double R, double ki, double kj, double kk);
-double WindowFunction_Gaussian(double R, double ki, double kj, double kk);
-double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, double kk);
-double WindowFunction_Cylinder(double R, double h, double ki, double kj, double kk);
-
-// needed for binary I/O
-template<class T> char* as_bytes(T& i)
-{
-    void* addr = &i;                            // get the address of the first byte
-                                                // of memory used to store the object
-    return static_cast<char*>(addr);            // treat that memory as bytes
-}
-
-// in case the .bin file store in diffrent endianness
-template<class T> void readBigEndian(std::ifstream& i, T& a)
-{
-    for(int n = sizeof(a) - 1; n >= 0 ; --n)
-    {
-        i.read(((char*) &a) + n, sizeof(char));
-    }
-}
-
-// Millennium Run galaxy catalog
-struct Galaxy
-{
-    float x, y, z;                              // position in Mpc/h;
-    float vx, vy, vz;                           // velocity in km/s;
-    float Mag_u, Mag_g, Mag_r, Mag_i, Mag_z;    // total galaxy magnitudes in (AB) standard SDSS filters
-    float BulgeMag_u, BulgeMag_g,
-           BulgeMag_r, BulgeMag_i, BulgeMag_z;  // bulge magnitude only
-    float StellarMass, BulgeMass, ColdGas, 
-           HotGas, EjectedMass, BlackHoleMass, Sfr; // all mass in 10^10Msun/h, Sfr in Msun/yr
-
-    int size() {return 23;}                     // number of parameter {x,y,x,vx,vy...} == 23
-
-    // initialize Galaxy from contineous memory <float*> a
-    void init(float* a)                         
-    {
-        x               =   a[0];
-        y               =   a[1];
-        z               =   a[2];
-        vx              =   a[3];
-        vy              =   a[4];
-        vz              =   a[5];
-        Mag_u           =   a[6];
-        Mag_g           =   a[7];
-        Mag_r           =   a[8];
-        Mag_i           =   a[9];
-        Mag_z           =   a[10];
-        BulgeMag_u      =   a[11];
-        BulgeMag_g      =   a[12];
-        BulgeMag_r      =   a[13];
-        BulgeMag_i      =   a[14];
-        BulgeMag_z      =   a[15];
-        StellarMass     =   a[16];
-        BulgeMass       =   a[17];
-        ColdGas         =   a[18];
-        HotGas          =   a[19];
-        EjectedMass     =   a[20];
-        BlackHoleMass   =   a[21];
-        Sfr             =   a[22];
-    }
-};
+extern double* PowerPhi;
 
 struct Index
 {
@@ -144,8 +81,6 @@ struct Offset
 
 // defined in mracs.cpp
 void welcome();
-std::vector<double> log_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT);
-std::vector<double> linear_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT);
 void read_parameter();
 double* sfc_offset(std::vector<Particle>& p, Offset v);
 double* sfc_grid_coordinate(std::vector<int64_t>& ps);
@@ -156,13 +91,6 @@ double* Spectrum1(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* Spectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k);
 double* B_Spline_Dual_Power_Spectrum(double m, double k0, double k1, size_t N_k);
-double* densityPowerFFT(fftw_complex* sc);
-double* densityPowerDWT(fftw_complex* sc);
-double* crossPowerDWT(fftw_complex* sc1, fftw_complex* sc2);
-double* densityCovarianceArray(fftw_complex* sc1,fftw_complex* sc2);
-double* densityVarianceArray(fftw_complex* sc);
-double* densityCorrelationFFT(fftw_complex* sc1, fftw_complex* sc2);
-double* densityCorrelationDWT(fftw_complex* sc1, fftw_complex* sc2);
 double* PowerPhiFunc(const size_t N);
 double* symmetryFold_lean(double* wA);
 double* windowArray(const double Radius, const double theta);
@@ -175,32 +103,10 @@ fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
 double array_sum(double* w, size_t N);
 double inner_product(double* v0, double* v1, size_t N);
 double *window_Pk(const double Radius, const double theta);
-double covar_CombinewithKernel(double* pk_plus, double* WinPk);
-double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int FINE);
 void force_resoluton_J(int j);
 void force_kernel_type(int x);
 void force_base_type(int a, int n);
 double* prj_grid(const double* s, bool DELETE_S);
 double* project_value(const double* s, std::vector<Particle>& p0, bool DELETE_S);
-void result_interpret(const double* s, std::vector<Particle>& p0, std::vector<double>& result);
-void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);
-double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0);
-double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vector<Particle>& p0);
-int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz);
-std::vector<int> web_classify(double** cxx, std::vector<Particle>& p);
-std::vector<int> web_classify_to_grid(double** cxx);
-std::vector<int> environment(std::vector<Particle>& dm, double Rs, std::vector<Particle>& p0);
-double** tidal_tensor(fftw_complex* sc, double* w);
-std::vector<Particle> default_random_particle(double boxsize, size_t n);
-std::vector<Particle> generate_random_particle(int x, double L, double w);
-void pdf(std::vector<Particle>& p0, double* c, double nf, double rhomin, double rhomax, int nbin, std::string ofname);
-void cic_pdf(std::vector<int64_t>& c, double rhomin, double rhomax, double cicexpect, std::string ofname);
-void cp_dispersion(std::vector<int64_t>& c, double* n, double rhomin, double rhomax, double cicexpect, std::string ofname);
-void print_min_max_and_size(std::vector<Particle>& hl);
-std::vector<std::vector<Particle>> halo_mass_split(std::vector<Particle>& hl, int nbin);
-int classify_index(std::vector<double>& node, double trial);
-std::vector<double> proto_sort(std::vector<double>& vec, int nbin);
-std::vector<size_t> limited_sort(std::vector<double> vec);
-size_t minimum_index(std::vector<double>& v);
-size_t maximum_index(std::vector<double>& v);
-std::vector<double> fourier_mode_correlation_1rlz(std::vector<Particle>& dm, std::vector<Particle>& hl);
+
+#endif

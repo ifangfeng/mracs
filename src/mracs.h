@@ -1,12 +1,10 @@
 #include"csmain.h"
-
-
-// read_in_simdata fuction declared
-std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string DataDirec);
-std::vector<Particle> read_in_TNG_3vector(std::string DataDirec);
-std::vector<Particle> read_in_DM_3vector(std::string DataDirec);
-std::vector<Particle> read_in_Halo_4vector(std::string DataDirec);
-std::vector<Particle> read_in_Halo_3vector(std::string DataDirec);
+#include"readin.h"
+#include"general.h"
+#include"kernel.h"
+#include"corr.h"
+#include"opstat.h"
+#include"split.h"
 
 //global variables for MRACS interface
 int Resolution;                    // MRA scale parameter J

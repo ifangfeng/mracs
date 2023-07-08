@@ -1,9 +1,5 @@
-#include"csmain.h"
+#include"readin.h"
 
-
-std::vector<Galaxy> read_in_Millennium_Run_galaxy_catalog(const std::string DataDirec);
-std::vector<Particle> read_in_TNG_3vector(std::string DataDirec);
-std::vector<Particle> read_in_Halo_4vector(std::string DataDirec);
 
 
 //=======================================================================================

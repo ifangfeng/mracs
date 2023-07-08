@@ -1,5 +1,4 @@
-#include"csmain.h"
-#include<cmath>
+#include"kernel.h"
 
 #ifndef TWOPI
 #define TWOPI M_PI*2

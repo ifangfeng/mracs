@@ -8,7 +8,7 @@ int main()
     auto p = read_in_DM_3vector(DataDirec);
     auto s = sfc(p);
     auto w = wft(Radius, 0);
-    auto c = convol3d(s, w);
+    auto c = convol3d(s, w, false);
 
     std::default_random_engine e;
     std::uniform_real_distribution<double> u(0, SimBoxL);
@@ -21,7 +21,7 @@ int main()
     }
     
     //result_interpret(c, p0, projNum);
-    auto projNum = project_value(c,p0);
+    auto projNum = project_value(c,p0,false);
     auto counNum = count_in_sphere(Radius, p, p0);
 
     const double volume{4./3*M_PI*pow(Radius/SimBoxL*GridLen,3)};
