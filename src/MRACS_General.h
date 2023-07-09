@@ -1,4 +1,4 @@
-#include"csmain.h"
+#include"MRACS_Main.h"
 
 std::vector<double> log_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT);
 std::vector<double> linear_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT);

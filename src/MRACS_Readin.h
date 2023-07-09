@@ -1,9 +1,24 @@
-#include"csmain.h"
+#include"MRACS_Main.h"
 
 #ifndef MRACS_READIN
 #define MRACS_READIN
 
+// needed for binary I/O
+template<class T> char* as_bytes(T& i)
+{
+    void* addr = &i;                            // get the address of the first byte
+                                                // of memory used to store the object
+    return static_cast<char*>(addr);            // treat that memory as bytes
+}
 
+// in case the .bin file store in diffrent endianness
+template<class T> void readBigEndian(std::ifstream& i, T& a)
+{
+    for(int n = sizeof(a) - 1; n >= 0 ; --n)
+    {
+        i.read(((char*) &a) + n, sizeof(char));
+    }
+}
 // Millennium Run galaxy catalog
 struct Galaxy
 {
@@ -51,21 +66,6 @@ std::vector<Particle> read_in_DM_3vector(std::string DataDirec);
 std::vector<Particle> read_in_Halo_4vector(std::string DataDirec);
 std::vector<Particle> read_in_Halo_3vector(std::string DataDirec);
 
-// needed for binary I/O
-template<class T> char* as_bytes(T& i)
-{
-    void* addr = &i;                            // get the address of the first byte
-                                                // of memory used to store the object
-    return static_cast<char*>(addr);            // treat that memory as bytes
-}
 
-// in case the .bin file store in diffrent endianness
-template<class T> void readBigEndian(std::ifstream& i, T& a)
-{
-    for(int n = sizeof(a) - 1; n >= 0 ; --n)
-    {
-        i.read(((char*) &a) + n, sizeof(char));
-    }
-}
 
 #endif

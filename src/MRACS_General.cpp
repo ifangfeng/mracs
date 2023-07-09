@@ -2,7 +2,7 @@
 // This cpp source file is part of MRACS project
 // 
 // =======================================================
-#include"general.h"
+#include"MRACS_General.h"
 
 
 std::vector<double> log_scale_generator(double Rmin, double Rmax, int Npt, bool ENDPOINT)

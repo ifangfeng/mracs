@@ -3,7 +3,7 @@
 // two point correlation function (Auto and Cross-correlation)
 // powerspecturm, cross-corrlation coefficience
 // =======================================================
-#include"corr.h"
+#include"MRACS_Corr.h"
 
 
 // ************************************************************************************

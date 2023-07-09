@@ -1,4 +1,4 @@
-#include"csmain.h"
+#include"MRACS_Main.h"
 
 double covar_CombinewithKernel(double* pk_plus, double* WinPk);
 double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int FINE);

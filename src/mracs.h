@@ -1,10 +1,10 @@
-#include"csmain.h"
-#include"readin.h"
-#include"general.h"
-#include"kernel.h"
-#include"corr.h"
-#include"opstat.h"
-#include"split.h"
+#include"MRACS_Main.h"
+#include"MRACS_Readin.h"
+#include"MRACS_General.h"
+#include"MRACS_Kernel.h"
+#include"MRACS_Corr.h"
+#include"MRACS_Opstat.h"
+#include"MRACS_Split.h"
 
 //global variables for MRACS interface
 int Resolution;                    // MRA scale parameter J

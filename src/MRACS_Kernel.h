@@ -1,4 +1,4 @@
-#include"csmain.h"
+#include"MRACS_Main.h"
 
 double WindowFunction_Shell(double R, double ki, double kj, double kk);
 double WindowFunction_Sphere(double R, double ki, double kj, double kk);

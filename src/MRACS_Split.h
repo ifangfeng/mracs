@@ -1,4 +1,4 @@
-#include"csmain.h"
+#include"MRACS_Main.h"
 
 std::vector<std::vector<Particle>> halo_mass_split(std::vector<Particle>& hl, int nbin);
 void print_min_max_and_size(std::vector<Particle>& hl);
