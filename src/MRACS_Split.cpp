@@ -392,3 +392,93 @@ fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2)
 
     return c;
 }
+
+// ************************************************************************************
+// input parameter "cov" is returned by "covar_of_data_vector()", which stores the covariance 
+// of dm and n splited halo catalogues. By solving A*x=lambda*C*x, return the maximun 
+// square root of lambda and its eigenvector as {sqrt(lambda),eigen_vector}, which has size of n+1
+// ************************************************************************************
+std::vector<double> optimal_weight_solver(std::vector<double> cov, int n, bool PRINT)
+{
+    const int symsize = n*(n+1)/2;
+
+    double A[symsize];
+    double C[symsize];
+    double Z[n*n];
+    double lambda[n];
+    //auto result = new double[n+1]{0};
+    std::vector<double> result(n+1);
+
+    //----initialize A and C-----
+    int l = 0;
+    for(int i = 0; i < n; ++i)
+        for(int j = i; j < n; ++j)
+        {
+            A[l] = cov[i+1] * cov[j+1] / cov[0];
+            ++l;
+        }
+    for(int i = 0; i < symsize; ++i) C[i] = cov[i+n+1];
+
+    //----solving eigen value lambda and eigen vector Z-----
+    auto info = LAPACKE_dspgv(LAPACK_ROW_MAJOR,1,'V','U',n,A,C,lambda,Z,n);
+
+    //---print---
+    if(info == 0 && PRINT){
+        std::cout << "eigen value: \n";
+        for(int i = 0; i < n; ++i) std::cout << lambda[i] << " ";std::cout <<"\n";
+        std::cout << "eigen vector(in column): \n";
+        double sum[n]{0};
+        for(int i = 0; i < n; ++i)
+            for(int j = 0; j < n; ++j) sum[j] += Z[i*n+j];
+        for(int i = 0; i < n; ++i){
+            for(int j = 0; j < n; ++j)
+                std::cout << Z[i*n+j]/sum[j] << ", ";
+            std::cout << "\n";
+        }
+    }
+
+    //---if everything goes well, normalize eigenvector and return---
+    if(info == 0 && lambda[n-1] <= 1.){
+        result[0] = sqrt(lambda[n-1]);
+        double sum{0};
+        for(int i = 0; i < n; ++i) sum += Z[i*n+n-1];
+        for(int i = 0; i < n; ++i) result[i+1] = Z[i*n+n-1] / sum;
+    }
+
+    return result;
+}
+
+// ************************************************************************************
+// this function return the environmental split halo catalogue and dm as {dm,vd,st,fl,kt}
+// specialized for optimal weight solver 
+// ************************************************************************************
+std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, std::vector<Particle>& hl, std::vector<Particle>& dm)
+{
+    std::ifstream ifs {ifn};
+    if(!ifs){std::cout << "reading " + ifn + " with error, Abort"; std::terminate();}
+
+    std::vector<int> envi;
+    int temp{0};
+    char comma{0};
+    while(ifs >> temp >> comma) envi.push_back(temp);
+    if(hl.size() == envi.size()) 
+        std::cout << "halo size matched! continue\n"; 
+    else std::terminate();
+    auto vd = new std::vector<Particle>;
+    auto st = new std::vector<Particle>;
+    auto fl = new std::vector<Particle>;
+    auto kt = new std::vector<Particle>;
+    for(size_t i = 0; i < envi.size(); ++i){
+        if(envi[i] == 0) vd->push_back(hl[i]);
+        else if(envi[i] == 1) st->push_back(hl[i]);
+        else if(envi[i] == 2) fl->push_back(hl[i]);
+        else if(envi[i] == 3) kt->push_back(hl[i]);
+    }
+    std::vector<int>().swap(envi);
+
+    if(hl.size() != (vd->size() + st->size() + fl->size() + kt->size())) 
+        std::cout << "Warning! halo environment subset size not matched\n";
+    std::vector<std::vector<Particle>*> result{&dm,vd,st,fl,kt};
+    
+    return result;
+}

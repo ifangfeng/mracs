@@ -19,7 +19,7 @@ int main(){
     std::vector<fftw_complex*> vec_sc;
     for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
 
-    double rmin{100},rmax{100}; 
+    double rmin{Radius},rmax{Radius}; 
     auto vecR = log_scale_generator(rmin,rmax,1,false);
     std::vector<double*> vec_wpk; for(auto r : vecR) vec_wpk.push_back(window_Pk(r,0));
     

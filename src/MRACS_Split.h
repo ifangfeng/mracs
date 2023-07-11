@@ -14,3 +14,5 @@ std::vector<int> web_classify_to_grid(double** cxx);
 std::vector<int> environment(std::vector<Particle>& dm, double Rs, std::vector<Particle>& p0);
 double gaussian_radius_from_mass(double m_smooth);
 fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
+std::vector<double> optimal_weight_solver(std::vector<double> cov, int n, bool PRINT);
+std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, std::vector<Particle>& hl, std::vector<Particle>& dm);

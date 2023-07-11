@@ -7,3 +7,4 @@ double* densityVarianceArray(fftw_complex* sc);
 double* densityPowerFFT(fftw_complex* sc);
 double* densityPowerDWT(fftw_complex* sc);
 std::vector<double> fourier_mode_correlation_1rlz(std::vector<Particle>& dm, std::vector<Particle>& hl);
+std::vector<double> covar_of_data_vector(std::vector<std::vector<Particle>*> vpts, double R);

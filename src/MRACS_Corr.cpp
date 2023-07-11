@@ -249,3 +249,27 @@ std::vector<double> fourier_mode_correlation_1rlz(std::vector<Particle>& dm, std
 
     return cross;
 }
+
+
+//=======================================================================================
+// covariance of vector of particle catalogue smoothed with radius R (kenel type specified in global variable "KernelFunc").
+// if the vector in size n, then the returned vector has length (n+1)n/2, cov[i,j]==<vpts[i],vpts[j]>
+//=======================================================================================
+std::vector<double> covar_of_data_vector(std::vector<std::vector<Particle>*> vpts, double R)
+{
+    std::vector<double> cov;
+    //auto cov = new std::vector<double>;
+
+    auto wpk = window_Pk(R,0);
+
+    std::vector<fftw_complex*> vec_sc;
+
+    for(auto x : vpts) 
+        vec_sc.push_back(sfc_r2c(sfc(*x),true));
+
+    for(int i = 0; i < vec_sc.size(); ++i)
+        for(int j = i; j < vec_sc.size(); ++j)
+            cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk));
+    
+    return cov;
+}
