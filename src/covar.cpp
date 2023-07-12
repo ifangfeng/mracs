@@ -33,7 +33,7 @@ int main(){
     for(int i = 0; i < vec_sc.size(); ++i)
         for(int j = 0; j <= i; ++j)
             for(auto w : vec_wpk){
-                cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),w));
+                cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),w,true));
             }
     std::cout << "covariance: \n";
     std::cout << "{array element: (dm,hl,vd,st,fl,kt)^T x (dm,hl,vd,st,fl,kt)}\n";
@@ -135,8 +135,8 @@ int main(){
         sc[n][1] = vec_sc[2][n][1] * w[0] / we[0] + vec_sc[3][n][1] * w[1] / we[1] +
                    vec_sc[4][n][1] * w[2] / we[2] + vec_sc[5][n][1] * w[3] / we[3];
     }
-    double ab = covar_CombinewithKernel(densityCovarianceArray(sc,vec_sc[0]),vec_wpk[0]);
-    double aa = covar_CombinewithKernel(densityCovarianceArray(sc,sc),vec_wpk[0]);
+    double ab = covar_CombinewithKernel(densityCovarianceArray(sc,vec_sc[0]),vec_wpk[0],true);
+    double aa = covar_CombinewithKernel(densityCovarianceArray(sc,sc),vec_wpk[0],true);
 
     std::cout << "r(reconstruct): " << ab/sqrt(aa * cov[0]) << std::endl;
 

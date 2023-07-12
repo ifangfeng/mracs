@@ -11,7 +11,7 @@
 // pk_plus is returned by densityCovarianceArray or densityVarianceArray, WinPk is returned by 
 // window_Pk when covarianceArray is the case, covar_CombinewithKernel() returns the covariance.
 // ************************************************************************************
-double covar_CombinewithKernel(double* pk_plus, double* WinPk)
+double covar_CombinewithKernel(double* pk_plus, double* WinPk, bool DELET_pk_plus)
 {
     double sum{0};
     #pragma omp parallel for reduction (+: sum)
@@ -23,6 +23,8 @@ double covar_CombinewithKernel(double* pk_plus, double* WinPk)
                 WinPk[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
             }
     double temp = pk_plus[(GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (GridLen-1) * (2*GridLen-1) + (GridLen-1)] * WinPk[0];
+
+    if(DELET_pk_plus) delete pk_plus;
 
     return sum/temp-1;
 }
@@ -269,7 +271,24 @@ std::vector<double> covar_of_data_vector(std::vector<std::vector<Particle>*> vpt
 
     for(int i = 0; i < vec_sc.size(); ++i)
         for(int j = i; j < vec_sc.size(); ++j)
-            cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk));
+            cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk,true));
     
     return cov;
+}
+
+//=======================================================================================
+// given two density fields in the form of fourier of sfc coeeficients, and 
+// smoothing kernel in the form of |w(k)|^2 as returning by window_pk, 
+// return the cross correlation coefficients of these two fileds 
+// r = <delta1,delta2> / sqrt(<delta1^2> * <delta2^2>)
+//=======================================================================================
+double correlation_coefficients(fftw_complex* sc1, fftw_complex* sc2, double* wpk)
+{
+    auto ab = covar_CombinewithKernel(densityCovarianceArray(sc1,sc2),wpk,true);
+    auto aa = covar_CombinewithKernel(densityCovarianceArray(sc1,sc1),wpk,true);
+    auto bb = covar_CombinewithKernel(densityCovarianceArray(sc2,sc2),wpk,true);
+
+    double cc = ab/sqrt(aa * bb);
+
+    return cc;
 }
