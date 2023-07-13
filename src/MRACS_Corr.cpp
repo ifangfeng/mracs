@@ -114,6 +114,8 @@ double* densityCovarianceArray(fftw_complex* sc1,fftw_complex* sc2)
                 PowerPhi[abs(i) * (GridLen+1) * (GridLen+1) + abs(j) * (GridLen+1) + abs(k)];
             }
     
+    delete Pk_array;
+    
     return Pk_plus;
 }
 

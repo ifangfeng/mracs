@@ -2,17 +2,31 @@
 #include"mracs.h"
 
 
-int main(){
+int main(int argc, char** argv){
     read_parameter();
     
+    
+    if(argc>1){
+        int n = std::stoi(argv[1]);
+        if(n<1 || n >128){
+            std::cout << "input error, abort\n";
+            return 0;
+        }
+    }
+
     auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
     auto hl_uni = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     std::string ifname {"output/envi_J10_GSR3_halo_Mcut2e12.txt"};
 
-
-    //auto vpts = halo_envi_match_and_split(ifname,hl);
-    auto vpts = halo_mass_split(hl,20);
+    std::vector<std::vector<Particle>*> vpts;
+    if(argc == 1){
+        vpts = halo_envi_match_and_split(ifname,hl);
+    }
+    else{
+        int n = std::stoi(argv[1]);
+        vpts = halo_mass_split(hl,n);
+    }
 
     // ------vpts_uni-------
     std::vector<std::vector<Particle>*> vpts_uni;
@@ -34,10 +48,11 @@ int main(){
     auto cc1 = correlation_coefficients(sc_dm,sc_hl,wpk);
     auto cc2 = correlation_coefficients(sc_dm,sc_rc,wpk);
     
-    std::cout << "Default dm-hl_uni correlation coefficient r = " << cc_uni << "\n";
-    std::cout << "Reconstruct with uniform initial weight r = " << cc0 << "\n";
-    std::cout << "Default dm-hl_mass correlation coefficient r = " << cc1 << "\n";
-    std::cout << "Reconstruct with halo mass initial weight r = " << cc2 << "\n";
+    std::cout << "Cross-correlation coefficient:\n";
+    std::cout << "[number picture] default r_n: " << cc_uni << "\n";
+    std::cout << "-----------RCST----------r_n: " << cc0 << "\n";
+    std::cout << "[mass picture]   default r_m: " << cc1 << "\n";
+    std::cout << "-----------RCST----------r_m: " << cc2 << "\n";
     
 
 

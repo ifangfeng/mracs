@@ -16,7 +16,7 @@ std::vector<std::vector<Particle>*> halo_mass_split(std::vector<Particle>& hl, i
     std::vector<double> vecmass(hl.size());
     #pragma omp parallel for
     for(size_t i = 0; i < hl.size(); ++i) vecmass[i] = hl[i].weight;
-    auto node = proto_sort(vecmass, nbin);std::cout << "hello\n";
+    auto node = proto_sort(vecmass, nbin);
 
     std::vector<std::vector<Particle>*> cata;
     for(int i = 0; i < nbin; ++i) 
