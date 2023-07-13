@@ -713,6 +713,23 @@ fftw_complex* sfc_r2c(double* s, bool DELETE_S)
     return sc;
 }
 
+double* sc_back(fftw_complex* sc, bool DELETE_SC)
+{
+    auto s = new double[GridVol];
+
+    fftwf_plan_with_nthreads(omp_get_max_threads());
+
+    auto pl = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc, s, FFTW_MEASURE);
+
+    fftw_execute(pl);
+
+    for(size_t i = 0; i < GridVol; ++i)
+        s[i] /= GridVol;
+    if(DELETE_SC) fftw_free(sc);
+
+    return s;
+}
+
 double* convol_c2r(fftw_complex* sc, double* w)
 {
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));

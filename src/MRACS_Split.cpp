@@ -11,22 +11,24 @@
 // ************************************************************************************
 // nbin is the number of catalogue splited, return as vector of catalog
 // ************************************************************************************
-std::vector<std::vector<Particle>> halo_mass_split(std::vector<Particle>& hl, int nbin)
+std::vector<std::vector<Particle>*> halo_mass_split(std::vector<Particle>& hl, int nbin)
 {
     std::vector<double> vecmass(hl.size());
     #pragma omp parallel for
     for(size_t i = 0; i < hl.size(); ++i) vecmass[i] = hl[i].weight;
-    auto node = proto_sort(vecmass, nbin);
+    auto node = proto_sort(vecmass, nbin);std::cout << "hello\n";
 
-    std::vector<std::vector<Particle>> cata(nbin);
+    std::vector<std::vector<Particle>*> cata;
+    for(int i = 0; i < nbin; ++i) 
+        cata.push_back(new std::vector<Particle>);
     for(auto x : hl){
-        cata[classify_index(node,x.weight)].push_back(x);
+        cata[classify_index(node,x.weight)]->push_back(x);
     }
-    for(auto x : cata) if(x.size() - hl.size()/nbin > nbin) {
+    for(auto x : cata) if(x->size() - hl.size()/nbin > nbin) {
         std::cout << "[func: SPLIT] !Warning, some nodes include multiple identical items\n";
         break;
     }
-    for(auto x : cata) print_min_max_and_size(x);
+    for(auto x : cata) print_min_max_and_size(*x);
 
     return cata;
 }
@@ -106,15 +108,17 @@ std::vector<double> proto_sort(std::vector<double>& vec, int nbin)
 // ************************************************************************************
 // direct sort of double vector, return as ascending index
 // ************************************************************************************
-std::vector<size_t> limited_sort(std::vector<double> vec)
+std::vector<size_t> limited_sort(std::vector<double>& vec)
 {
-    std::cout << "[func: limited_sort] node size: " << vec.size() << std::endl;
+    std::vector<double> tmp;
+    for(auto x : vec) tmp.push_back(x);
+    std::cout << "[func: limited_sort] node size: " << tmp.size() << std::endl;
     std::vector<size_t> sortedID;
-    size_t max_id = maximum_index(vec);
-    const double MAX{vec[max_id]};
-    for(size_t i = 0; i < vec.size() - 1; ++i){
-        size_t id = minimum_index(vec);
-        vec[id] = MAX;
+    size_t max_id = maximum_index(tmp);
+    const double MAX{tmp[max_id]};
+    for(size_t i = 0; i < tmp.size() - 1; ++i){
+        size_t id = minimum_index(tmp);
+        tmp[id] = MAX;
         sortedID.push_back(id);
     }
     sortedID.push_back(max_id);
@@ -459,7 +463,7 @@ std::vector<double> optimal_weight_solver(std::vector<double> cov, int n, bool P
 // this function return the environmental split halo catalogue and dm as {dm,vd,st,fl,kt}
 // specialized for optimal weight solver 
 // ************************************************************************************
-std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, std::vector<Particle>& hl, std::vector<Particle>& dm)
+std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, std::vector<Particle>& hl)
 {
     std::ifstream ifs {ifn};
     if(!ifs){std::cout << "reading " + ifn + " with error, Abort"; std::terminate();}
@@ -485,7 +489,7 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, s
 
     if(hl.size() != (vd->size() + st->size() + fl->size() + kt->size())) 
         std::cout << "Warning! halo environment subset size not matched\n";
-    std::vector<std::vector<Particle>*> result{&dm,vd,st,fl,kt};
+    std::vector<std::vector<Particle>*> result{vd,st,fl,kt};
     
     return result;
 }
@@ -497,14 +501,14 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, s
 // which decide the reconstruct coeefficient of each halo component (weight vector), after solving weight
 // vector we then reconstruct the halo fields with optimal weight and return as fourier of sfc coefficients
 // ************************************************************************************************************
-fftw_complex* optimal_reconstruct(std::vector<std::vector<Particle>*> vpts, double R, bool PRINT)
+fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT)
 {
     // ------covariance of each component------
     std::vector<double> cov;
 
     auto wpk = window_Pk(R,0);
 
-    std::vector<fftw_complex*> vec_sc;
+    std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sfc_r2c(sfc(dm),true));
 
     for(auto x : vpts) 
         vec_sc.push_back(sfc_r2c(sfc(*x),true));
@@ -514,17 +518,23 @@ fftw_complex* optimal_reconstruct(std::vector<std::vector<Particle>*> vpts, doub
             cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk,true));
 
     // ------solving optimal weight vector------
-    size_t dim{vpts.size() - 1}; 
+    size_t dim{vpts.size()}; 
     auto solve =  optimal_weight_solver(cov,dim,PRINT);
 
     // -----------------reconstruct--------------
     std::vector<double> weight, norm;
     for(int i = 1; i < solve.size(); ++i) weight.push_back(solve[i]);
-    for(int i = 1; i < vpts.size(); ++i)  norm.push_back(static_cast<double>(vpts[i]->size()));
+    for(auto x : vpts){
+        double sum = 0;
+        //#pragma omp parallel reduction (+:sum)
+        for(auto pt : *x) sum += pt.weight;
+        norm.push_back(sum);
+    }
 
-    double sum{0};
-    for(auto x : norm) sum += x;
-    for(int i = 0; i < weight.size(); ++i) weight[i] /= norm[i] / sum;
+
+    double total{0};
+    for(auto x : norm) total += x;
+    for(int i = 0; i < weight.size(); ++i) weight[i] /= norm[i] / total;
 
     #pragma omp parallel for
     for(size_t l = 0; l < GridLen * GridLen * (GridLen/2 + 1); ++l) {

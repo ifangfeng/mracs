@@ -6,23 +6,40 @@ int main(){
     read_parameter();
     
     auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
-    auto hl = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    auto hl_uni = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     std::string ifname {"output/envi_J10_GSR3_halo_Mcut2e12.txt"};
 
-    auto vpts = halo_envi_match_and_split(ifname,hl,dm);
-    //auto vpts_mass = halo_mass_split(hl,6);
-    auto sc_rc = optimal_reconstruct(vpts,Radius,true);
-    
-    // ------check-------
+
+    //auto vpts = halo_envi_match_and_split(ifname,hl);
+    auto vpts = halo_mass_split(hl,20);
+
+    // ------vpts_uni-------
+    std::vector<std::vector<Particle>*> vpts_uni;
+    for(auto x : vpts) vpts_uni.push_back(new std::vector<Particle>);
+    for(int i = 0; i < vpts.size(); ++i) for(auto x : *vpts[i]) vpts_uni[i]->push_back({x.x,x.y,x.z,1.});
+
+    // ----reconstruct and check-------
+    auto sc_hl_uni = sfc_r2c(sfc(hl_uni),true);
     auto sc_hl = sfc_r2c(sfc(hl),true);
     auto sc_dm = sfc_r2c(sfc(dm),true);
 
+    auto sc_rc_uni = optimal_reconstruct(dm,vpts_uni,Radius,true);
+    auto sc_rc = optimal_reconstruct(dm,vpts,Radius,true);
+    
     auto wpk = window_Pk(Radius,0);
-    auto cc0 = correlation_coefficients(sc_dm,sc_hl,wpk);
-    auto cc1 = correlation_coefficients(sc_dm,sc_rc,wpk);
+    
+    auto cc_uni = correlation_coefficients(sc_dm,sc_hl_uni,wpk);
+    auto cc0 = correlation_coefficients(sc_dm,sc_rc_uni,wpk);
+    auto cc1 = correlation_coefficients(sc_dm,sc_hl,wpk);
+    auto cc2 = correlation_coefficients(sc_dm,sc_rc,wpk);
+    
+    std::cout << "Default dm-hl_uni correlation coefficient r = " << cc_uni << "\n";
+    std::cout << "Reconstruct with uniform initial weight r = " << cc0 << "\n";
+    std::cout << "Default dm-hl_mass correlation coefficient r = " << cc1 << "\n";
+    std::cout << "Reconstruct with halo mass initial weight r = " << cc2 << "\n";
+    
 
-    std::cout << "default dm-hl correlation coefficient r = " << cc0 << "\n";
-    std::cout << "reconstructed correlation coefficient r = " << cc1 << "\n";
 
     
 }
