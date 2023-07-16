@@ -4,21 +4,29 @@
 double minimum_weight(std::vector<Particle>& v);
 double maximum_weight(std::vector<Particle>& v);
 
-int main(){
+int main(int argc, char** argv){
     read_parameter();
+
+    int nbin{0};
+    if(argc == 1) 
+        nbin = 1;
+    else {
+        nbin = std::stoi(argv[1]);
+        if(nbin < 1 || nbin > 128){
+            std::cout << "input error, abort\n";
+            return 0;
+        }
+    }
     
     auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
     std::string ifname {"output/envi_J10_GSR3_halo_Mcut2e12.txt"};
 
 
-    auto vpts = halo_envi_match_and_split(ifname,hl);
+    auto vpts = halo_envi_mass_multi_split(ifname, hl, nbin);
+    // auto vpts = halo_envi_mass_concatenate_split(ifname, hl, nbin);
 
-    for(int i = 0; auto x : vpts){
-        std::cout << "component " << i << ": min=" << minimum_weight(*x) 
-        <<  ", max=" << maximum_weight(*x) << ", size()= " << x->size() << "\n";
-        ++i;
-    }
+    for(auto x : vpts) print_min_max_and_size(*x);
 
     // ----reconstruct and check-------
     auto sc_hl = sfc_r2c(sfc(hl),true);

@@ -8,6 +8,40 @@
 #include"MRACS_Corr.h"
 
 
+// we first split halo cataloge to four environmental sub_catalogues then in each sub-cata 
+// further split according halo mass in envi major sequences, halo mass split is an independent parameter
+std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::string ifn, std::vector<Particle>& hl, int nbin)
+{
+    // ------envi split first--------
+    auto evpts = halo_envi_match_and_split(ifn, hl);
+
+    // -----nodes of mass split-----
+    std::vector<double> vecmass(hl.size());
+    #pragma omp parallel for
+    for(size_t i = 0; i < hl.size(); ++i) vecmass[i] = hl[i].weight;
+    auto node = nodes_of_proto_sort(vecmass, nbin);
+
+    // --------sub split-------
+    std::vector<std::vector<Particle>*> cata;
+    for(auto x : evpts){
+        auto tmp = mass_classify_and_push_back(node,*x,nbin);
+        for(auto y : tmp) cata.push_back(y);
+    }
+
+    return cata;
+}
+
+// unlike multi_split, we just concatenate splited sub-cataloges
+std::vector<std::vector<Particle>*> halo_envi_mass_concatenate_split(std::string ifn, std::vector<Particle>& hl, int nbin)
+{
+    auto vpts = halo_envi_match_and_split(ifn, hl);
+    auto hvpts = halo_mass_split(hl,nbin);
+
+    for(auto x : hvpts) vpts.push_back(x);
+
+    return vpts;
+}
+
 // ************************************************************************************
 // nbin is the number of catalogue splited, return as vector of catalog
 // ************************************************************************************
@@ -16,8 +50,15 @@ std::vector<std::vector<Particle>*> halo_mass_split(std::vector<Particle>& hl, i
     std::vector<double> vecmass(hl.size());
     #pragma omp parallel for
     for(size_t i = 0; i < hl.size(); ++i) vecmass[i] = hl[i].weight;
-    auto node = proto_sort(vecmass, nbin);
+    auto node = nodes_of_proto_sort(vecmass, nbin);
 
+    return mass_classify_and_push_back(node,hl,nbin);
+}
+
+// given nodes of splitting halo cataloge, classify each particle with nodes and then
+// push back to desire sub-catalog. parameter "node" returns from nodes_of_proto_sort()
+std::vector<std::vector<Particle>*> mass_classify_and_push_back(std::vector<double>& node, std::vector<Particle>& hl, int nbin)
+{
     std::vector<std::vector<Particle>*> cata;
     for(int i = 0; i < nbin; ++i) 
         cata.push_back(new std::vector<Particle>);
@@ -54,7 +95,7 @@ int classify_index(std::vector<double>& node, double trial){
 // ************************************************************************************
 // return the nbin fraction node points of a double vector in ascending order
 // ************************************************************************************
-std::vector<double> proto_sort(std::vector<double>& vec, int nbin)
+std::vector<double> nodes_of_proto_sort(std::vector<double>& vec, int nbin)
 {
     std::vector<double> node;
     auto max_id = maximum_index(vec);
