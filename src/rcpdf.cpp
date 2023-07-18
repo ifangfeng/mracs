@@ -1,27 +1,33 @@
 #include"mracs.h"
 
+void prj_pdf(std::string ofn, double* c, std::vector<Particle>& p0, double min, double max, int nbin);
+
 int main(){
     read_parameter();
     auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    auto hl_uni = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
     // ----reconstructed hl----
-    auto vpts  = halo_mass_split(hl,32);
+    auto vpts  = halo_mass_split(hl,4);
     auto sc_rc = optimal_reconstruct(dm,vpts,Radius,true);
 
     // ------convolve with window w------
     auto w = wfc(Radius,0);
     auto s_dm = convol3d(sfc(dm),w,true);
+    auto s_hl_uni = convol3d(sfc(hl_uni),w,true);
     auto s_hl = convol3d(sfc(hl),w,true);
     auto s_rc = convol_c2r(sc_rc, w);
 
     // ----probability distribution function----
     auto p0 = generate_random_particle(500,SimBoxL,0);
 
-    auto n_dm = project_value(s_dm,p0,true);
-    auto n_hl = project_value(s_hl,p0,true);
-    auto n_rc = project_value(s_rc,p0,true);
-
+    std::vector<std::string> vec_ifn {"dm","hl_uni","hl","rc"};
+    std::vector<double*> vec_s {s_dm,s_hl_uni,s_hl,s_rc};
+    for(int i = 0; i < vec_ifn.size(); ++i){
+        auto ofn = "output/rcpdf_" + vec_ifn[i] + "_" + RADII + ".txt";
+        prj_pdf(ofn,vec_s[i],p0,0,5,1000);
+    }
 
 }
 
