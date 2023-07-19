@@ -5,7 +5,6 @@
 int main(int argc, char** argv){
     read_parameter();
     
-    
     if(argc>1){
         int n = std::stoi(argv[1]);
         if(n<1 || n >128){
@@ -49,10 +48,10 @@ int main(int argc, char** argv){
     auto cc2 = correlation_coefficients(sc_dm,sc_rc,wpk);
     
     std::cout << "Cross-correlation coefficient:\n";
-    std::cout << "[number picture] default r_n: " << cc_uni << "\n";
-    std::cout << "-----------RCST----------r_n: " << cc0 << "\n";
-    std::cout << "[mass picture]   default r_m: " << cc1 << "\n";
-    std::cout << "-----------RCST----------r_m: " << cc2 << "\n";
+    std::cout << "[number picture] default r_n: " << cc_uni << ", E= " << sqrt(1-pow(cc_uni,2)) << "\n";
+    std::cout << "-----------RCST----------r_n: " << cc0    << ", E= " << sqrt(1-pow(cc0,2))    << "\n";
+    std::cout << "[mass picture]   default r_m: " << cc1    << ", E= " << sqrt(1-pow(cc1,2))    << "\n";
+    std::cout << "-----------RCST----------r_m: " << cc2    << ", E= " << sqrt(1-pow(cc2,2))    << "\n";
     
 
 

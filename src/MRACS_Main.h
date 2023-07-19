@@ -66,6 +66,16 @@ struct Particle
     double weight;
 };
 
+struct Halo
+{
+    double x;
+    double y;
+    double z;
+    double Mass;
+    double Concentration;
+    double Spin;
+};
+
 struct Offset
 {
     double dx;

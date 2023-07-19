@@ -54,12 +54,12 @@ int main(int argc, char** argv){
     auto cc_mul_rc  = correlation_coefficients(sc_dm,sc_mul_rc,wpk);
     
     std::cout << "Cross-correlation coefficient:\n";
-    std::cout << "[number picture] default r_n: " << cc_uni <<", E= " << sqrt(1-pow(cc_uni,2)) << "\n";
-    std::cout << "[mass   picture] default r_m: " << cc_hl << ", E= " << sqrt(1-pow(cc_hl,2)) << "\n";
-    std::cout << "---RCST-------envi-------r_m: " << cc_envi_rc << ", E= " << sqrt(1-pow(cc_envi_rc,2)) << "\n";
-    std::cout << "---RCST-------mass-------r_m: " << cc_mass_rc <<", E= " << sqrt(1-pow(cc_mass_rc,2)) << "\n";
-    std::cout << "---RCST----envi + mass---r_m: " << cc_con_rc <<", E= " << sqrt(1-pow(cc_con_rc,2)) << "\n";
-    std::cout << "---RCST----envi * mass---r_m: " << cc_mul_rc <<", E= " << sqrt(1-pow(cc_mul_rc,2)) << "\n";
+    std::cout << "[number picture] default r_n: " << cc_uni      << ", E= " << sqrt(1-pow(cc_uni,2))     << "\n";
+    std::cout << "[mass   picture] default r_m: " << cc_hl       << ", E= " << sqrt(1-pow(cc_hl,2))      << "\n";
+    std::cout << "---RCST-------envi-------r_m: " << cc_envi_rc  << ", E= " << sqrt(1-pow(cc_envi_rc,2)) << "\n";
+    std::cout << "---RCST-------mass-------r_m: " << cc_mass_rc  << ", E= " << sqrt(1-pow(cc_mass_rc,2)) << "\n";
+    std::cout << "---RCST----envi + mass---r_m: " << cc_con_rc   << ", E= " << sqrt(1-pow(cc_con_rc,2))  << "\n";
+    std::cout << "---RCST----envi * mass---r_m: " << cc_mul_rc   << ", E= " << sqrt(1-pow(cc_mul_rc,2))  << "\n";
     
 
 
