@@ -3,6 +3,7 @@
 std::vector<std::vector<Particle>*> halo_mass_split(std::vector<Particle>& hl, int nbin);
 void print_min_max_and_size(std::vector<Particle>& hl);
 int classify_index(std::vector<double>& node, double trial);
+std::vector<int> envi_vector_readin(std::string ifn, size_t hlsize);
 std::vector<std::vector<Particle>*> mass_classify_and_push_back(std::vector<double>& node, std::vector<Particle>& hl, int nbin);
 std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::string ifn, std::vector<Particle>& hl, int nbin);
 std::vector<std::vector<Particle>*> halo_envi_mass_concatenate_split(std::string ifn, std::vector<Particle>& hl, int nbin);

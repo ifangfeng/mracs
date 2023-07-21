@@ -76,6 +76,14 @@ struct Halo
     double Spin;
 };
 
+// double x,y,z,m; int M,C,E,S
+struct Hinfo
+{
+    double x, y, z;
+    double mass;
+    int Mi{0}, Ci{0}, Ei{0}, Si{0}; // index of mass bin, envir bin, concentration and spin bin;
+};
+
 struct Offset
 {
     double dx;

@@ -28,12 +28,6 @@ int main(int argc, char** argv){
     auto con_vpts  = halo_envi_mass_concatenate_split(ifname, hl, nbin);
     auto mul_vpts  = halo_envi_mass_multi_split(ifname, hl, nbin);
 
-    // -----mul_vpts check----
-    std::cout << "=======================\n";
-    for(auto x : mul_vpts) print_min_max_and_size(*x);
-    std::cout << "=======================\n";
-
-
     // ----reconstruct and check-------
     auto sc_hl_uni = sfc_r2c(sfc(hl_uni),true);
     auto sc_hl = sfc_r2c(sfc(hl),true);

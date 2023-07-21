@@ -62,9 +62,11 @@ std::vector<std::vector<Particle>*> mass_classify_and_push_back(std::vector<doub
     std::vector<std::vector<Particle>*> cata;
     for(int i = 0; i < nbin; ++i) 
         cata.push_back(new std::vector<Particle>);
+        
     for(auto x : hl){
         cata[classify_index(node,x.weight)]->push_back(x);
     }
+
     for(auto x : cata) if(x->size() - hl.size()/nbin > nbin) {
         std::cout << "[func: SPLIT] !Warning, some nodes include multiple identical items\n";
         break;
@@ -75,12 +77,16 @@ std::vector<std::vector<Particle>*> mass_classify_and_push_back(std::vector<doub
 }
 
 void print_min_max_and_size(std::vector<Particle>& hl){
-    double min{hl[0].weight},max{hl[0].weight};
-    for(auto x : hl){
-        if(x.weight > max) max = x.weight;
-        else if(x.weight < min) min = x.weight;
+    if(hl.size() != 0){
+        double min{hl[0].weight},max{hl[0].weight};
+        for(auto x : hl){
+            if(x.weight > max) max = x.weight;
+            else if(x.weight < min) min = x.weight;
+        }
+        std::cout << "size: " << hl.size() << ", min: " << min << ", max: " << max << std::endl; 
     }
-    std::cout << "size: " << hl.size() << ", min: " << min << ", max: " << max << std::endl; 
+    else 
+        std::cout << "!Empty vector\n";
 }
 // which vector should trial been push back
 int classify_index(std::vector<double>& node, double trial){
@@ -500,11 +506,8 @@ std::vector<double> optimal_weight_solver(std::vector<double> cov, int n, bool P
     return result;
 }
 
-// ************************************************************************************
-// this function return the environmental split halo catalogue and dm as {dm,vd,st,fl,kt}
-// specialized for optimal weight solver 
-// ************************************************************************************
-std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, std::vector<Particle>& hl)
+// variable {hlsize} for envi size matching
+std::vector<int> envi_vector_readin(std::string ifn, size_t hlsize)
 {
     std::ifstream ifs {ifn};
     if(!ifs){std::cout << "reading " + ifn + " with error, Abort"; std::terminate();}
@@ -513,9 +516,21 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, s
     int temp{0};
     char comma{0};
     while(ifs >> temp >> comma) envi.push_back(temp);
-    if(hl.size() == envi.size()) 
+    if(hlsize == envi.size()) 
         std::cout << "halo size matched! continue\n"; 
     else std::terminate();
+
+    return envi;
+}
+
+// ************************************************************************************
+// this function return the environmental split halo catalogue and dm as {dm,vd,st,fl,kt}
+// specialized for optimal weight solver 
+// ************************************************************************************
+std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, std::vector<Particle>& hl)
+{
+    auto envi = envi_vector_readin(ifn,hl.size());
+
     auto vd = new std::vector<Particle>;
     auto st = new std::vector<Particle>;
     auto fl = new std::vector<Particle>;
@@ -535,7 +550,6 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, s
     return result;
 }
 
-
 // ************************************************************************************************************
 // return the fourier of scaling function coefficients of optimal reconstructed halo catalogues, vpts is the
 // vector of dm and splited halo cataloges, in envi-split case: {dm,vd,st,fl,kt}. R specify the smmothing scale
@@ -551,12 +565,36 @@ fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::ve
 
     std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sfc_r2c(sfc(dm),true));
 
+    // -------size check before eigen solver-----
+    bool EmptySize {false};
+
     for(auto x : vpts) 
-        vec_sc.push_back(sfc_r2c(sfc(*x),true));
+        if (x->size() < 100) 
+            EmptySize = true;
+
+    if(EmptySize){
+        std::cout << "!EmptySize, some elements will be removed\n";
+        std::cout << "---+bf\n" << "size: ";
+        std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
+        for(int i = 0; i < vpts.size(); ++i) {
+            if(vpts[i]->size() < 100){
+                delete vpts[i];
+                vpts.erase(vpts.begin()+i);
+                --i;
+            }
+        }
+        std::cout << "---+af\n" << "size: ";
+        std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
+    }
+
+    // -------covariance array-------
+    for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
 
     for(int i = 0; i < vec_sc.size(); ++i)
         for(int j = i; j < vec_sc.size(); ++j)
+        {   
             cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk,true));
+        }
 
     // ------solving optimal weight vector------
     size_t dim{vpts.size()}; 
@@ -571,7 +609,6 @@ fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::ve
         for(auto pt : *x) sum += pt.weight;
         norm.push_back(sum);
     }
-
 
     double total{0};
     for(auto x : norm) total += x;
