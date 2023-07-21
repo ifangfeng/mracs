@@ -1,13 +1,18 @@
-// Hinfo  (double: x, y, z, Mass; int: M, C, E, S)
+// Hinfo  (double: x, y, z, Mass; int: M, E, C, S)
 #include"mracs.h"
 
 int main(int argc, char** argv){
     read_parameter();
-    
+    // ----initial-----
     const int Ebin{4};
     int Mbin{1}, Cbin{1}, Sbin{1};
     
-    if(argc==4){
+    if(argc!=4){
+        std::cout << "There parameters are needed: MassBin ConcentratrionBin SpinBin\n";
+        std::cout << "each bin parameter should be lager than or equal to 1, e.g.";
+        std::cout << "name:" << " 4, 4, 4\n";
+    }
+    else {
         for(int i = 1; i < 4; ++i){
             int n = std::stoi(argv[i]);
             if(n<1 || n >128){
@@ -15,112 +20,115 @@ int main(int argc, char** argv){
                 return 0;
             }
         }
+        Mbin = std::stoi(argv[1]);
+        Cbin = std::stoi(argv[2]);
+        Sbin = std::stoi(argv[3]);
     }
-    int Multi_size {Mbin * Cbin * Ebin * Sbin};
+    int Multi_size {Mbin * Ebin * Cbin * Sbin};
     if(Multi_size > 1024) {
         std::cout << "parameter space reaching the limit\n";
         std::terminate();
     }
-    
+    // ------reading----
     auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto h6 = read_in_Halo_6vector("/data0/MDPL2/halo_Mcut_slice.bin");
     std::string ifname {"output/envi_J10_GSR3_halo_Mcut2e12.txt"};
     auto envi = envi_vector_readin(ifname,h6.size());
 
-    // ----- classify halo catalogue then assign to Hinfo -------
-    std::vector<Hinfo> hi(h6.size());
-    #pragma omp parallel for
-    for(size_t i = 0; i < h6.size(); ++i){
-        hi[i] = {h6[i].x,h6[i].y,h6[i].z,h6[i].Mass,0,0,envi[i],0};
+    std::vector<Particle> hl(h6.size()), hl_uni(h6.size());
+    for(size_t i = 0; i < h6.size(); ++i) {
+        hl[i] = {h6[i].x,h6[i].y,h6[i].z,h6[i].Mass};
+        hl_uni[i] = {h6[i].x,h6[i].y,h6[i].z,1.};
     }
-    std::vector<double> vec_mass(h6.size());
-    std::vector<double> vec_cont(h6.size());
-    std::vector<double> vec_spin(h6.size());
+
+
+    // ======================= classify and dispatch halo particles ================
+    std::vector<double> vec_mass(h6.size()), vec_cntr(h6.size()), vec_spin(h6.size());
     #pragma omp parallel for
     for(size_t i = 0; i < h6.size(); ++i){
         vec_mass[i] = h6[i].Mass;
-        vec_cont[i] = h6[i].Concentration;
+        vec_cntr[i] = h6[i].Concentration;
         vec_spin[i] = h6[i].Spin;
     }
     auto node_M = nodes_of_proto_sort(vec_mass, Mbin);
-    auto node_C = nodes_of_proto_sort(vec_cont, Cbin);
+    auto node_C = nodes_of_proto_sort(vec_cntr, Cbin);
     auto node_S = nodes_of_proto_sort(vec_spin, Sbin);
 
-    for(size_t i = 0; i < h6.size(); ++i){
-        hi[i].Mi = classify_index(node_M,h6[i].Mass);
-        hi[i].Ci = classify_index(node_C,h6[i].Concentration);
-        hi[i].Si = classify_index(node_S,h6[i].Spin);
-    }
+    std::cout << "spin:\n";
+    std::vector<std::vector<double>*> vv_spin;
+    for(int i = 0; i < Sbin; ++i) vv_spin.push_back(new std::vector<double>);
+    for(auto x : vec_spin) vv_spin[classify_index(node_S,x)]->push_back(x);
+    for(auto x : vv_spin)
+        print_min_max_and_size_double(*x);
 
-    std::vector<std::vector<Particle>*> vpts_mul;
-    for(int i = 0; i < Multi_size; ++i) vpts_mul.push_back(new std::vector<Particle>);
 
+    
+    
+    std::vector<std::vector<Particle>*> vpts_mass, vpts_envi, vpts_cntr, vpts_spin;
+    std::vector<std::vector<Particle>*> vpts_coca, vpts_mult;
+    for(int i = 0; i < Sbin; ++i) vpts_spin.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Ebin; ++i) vpts_envi.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Cbin; ++i) vpts_cntr.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Mbin; ++i) vpts_mass.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Mbin + Cbin + Ebin + Sbin; ++i) vpts_coca.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Mbin * Cbin * Ebin * Sbin; ++i) vpts_mult.push_back(new std::vector<Particle>);
+    
+
+    // ------------------- vpts_ M C E S------------------
+    for(auto x : h6) vpts_mass[classify_index(node_M,x.Mass)]->push_back({x.x,x.y,x.z,x.Mass});
+    for(auto x : h6) vpts_cntr[classify_index(node_C,x.Concentration)]->push_back({x.x,x.y,x.z,x.Mass});
+    for(size_t i = 0; i < h6.size(); ++i) vpts_envi[envi[i]]->push_back({h6[i].x,h6[i].y,h6[i].z,h6[i].Mass});
+    for(auto x : h6) vpts_spin[classify_index(node_S,x.Spin)]->push_back({x.x,x.y,x.z,x.Mass});
+
+    // ------------------- multi-dimension ------------------
     for(size_t i = 0; auto x : h6){
-        vpts_mul[classify_index(node_M,x.Mass) * Cbin * Ebin * Sbin + classify_index(node_C,x.Concentration) * Ebin * Sbin + envi[i] * Sbin + 
+        vpts_mult[classify_index(node_M,x.Mass) * Cbin * Ebin * Sbin + classify_index(node_C,x.Concentration) * Ebin * Sbin + envi[i] * Sbin + 
         classify_index(node_S,x.Spin)]->push_back({x.x,x.y,x.z,x.Mass});
         ++i;
     }
+    // ------------------- concatenate ------------------
+    for(auto x : h6) vpts_coca[classify_index(node_M,x.Mass)]->push_back({x.x,x.y,x.z,x.Mass});
+    for(auto x : h6) vpts_coca[Mbin + classify_index(node_C,x.Concentration)]->push_back({x.x,x.y,x.z,x.Mass});
+    for(size_t i = 0; i < h6.size(); ++i) vpts_coca[Mbin + Cbin + envi[i]]->push_back({h6[i].x,h6[i].y,h6[i].z,h6[i].Mass});
+    for(auto x : h6) vpts_coca[Mbin + Cbin + Ebin + classify_index(node_S,x.Spin)]->push_back({x.x,x.y,x.z,x.Mass});
 
-
-
-    // ------vpts_uni-------
-    std::vector<std::vector<Particle>*> vpts_uni;
-    for(auto x : vpts) vpts_uni.push_back(new std::vector<Particle>);
-    for(int i = 0; i < vpts.size(); ++i) for(auto x : *vpts[i]) vpts_uni[i]->push_back({x.x,x.y,x.z,1.});
+    std::cout << "spin mass:\n";
+    for(auto x : vpts_spin) print_min_max_and_size(*x);
 
     // ----reconstruct and check-------
     auto sc_hl_uni = sfc_r2c(sfc(hl_uni),true);
     auto sc_hl = sfc_r2c(sfc(hl),true);
     auto sc_dm = sfc_r2c(sfc(dm),true);
 
-    auto sc_rc_uni = optimal_reconstruct(dm,vpts_uni,Radius,true);
-    auto sc_rc = optimal_reconstruct(dm,vpts,Radius,true);
+    auto sc_rc_mass = optimal_reconstruct(dm,vpts_mass,Radius,true);
+    auto sc_rc_cntr = optimal_reconstruct(dm,vpts_cntr,Radius,true);
+    auto sc_rc_envi = optimal_reconstruct(dm,vpts_envi,Radius,true);
+    auto sc_rc_spin = optimal_reconstruct(dm,vpts_spin,Radius,true);
+    auto sc_rc_coca = optimal_reconstruct(dm,vpts_coca,Radius,true);
+    auto sc_rc_mult = optimal_reconstruct(dm,vpts_mult,Radius,true);
     
     auto wpk = window_Pk(Radius,0);
     
-    auto cc_uni = correlation_coefficients(sc_dm,sc_hl_uni,wpk);
-    auto cc0 = correlation_coefficients(sc_dm,sc_rc_uni,wpk);
-    auto cc1 = correlation_coefficients(sc_dm,sc_hl,wpk);
-    auto cc2 = correlation_coefficients(sc_dm,sc_rc,wpk);
+    auto cc_hl_uni = correlation_coefficients(sc_dm,sc_hl_uni,wpk);
+    auto cc_hl = correlation_coefficients(sc_dm,sc_hl,wpk);
+    auto cc_mass = correlation_coefficients(sc_dm,sc_rc_mass,wpk);
+    auto cc_cntr = correlation_coefficients(sc_dm,sc_rc_cntr,wpk);
+    auto cc_envi = correlation_coefficients(sc_dm,sc_rc_envi,wpk);
+    auto cc_spin = correlation_coefficients(sc_dm,sc_rc_spin,wpk);
+    auto cc_coca = correlation_coefficients(sc_dm,sc_rc_coca,wpk);
+    auto cc_mult = correlation_coefficients(sc_dm,sc_rc_mult,wpk);
+    
     
     std::cout << "Cross-correlation coefficient:\n";
-    std::cout << "[number picture] default r_n: " << cc_uni << ", E= " << sqrt(1-pow(cc_uni,2)) << "\n";
-    std::cout << "-----------RCST----------r_n: " << cc0    << ", E= " << sqrt(1-pow(cc0,2))    << "\n";
-    std::cout << "[mass picture]   default r_m: " << cc1    << ", E= " << sqrt(1-pow(cc1,2))    << "\n";
-    std::cout << "-----------RCST----------r_m: " << cc2    << ", E= " << sqrt(1-pow(cc2,2))    << "\n";
+    std::cout << "[number picture] default   r_n: "              << cc_hl_uni   << ", E= " << sqrt(1-pow(cc_hl_uni,2))  << "\n";
+    std::cout << "[mass   picture] default   r_m: "              << cc_hl       << ", E= " << sqrt(1-pow(cc_hl,2))      << "\n";
+    std::cout << "---RCST-------Mass:" << Mbin << "-------r_m: " << cc_mass     << ", E= " << sqrt(1-pow(cc_mass,2))    << "\n";
+    std::cout << "---RCST-------Envi:" << Ebin << "-------r_m: " << cc_envi     << ", E= " << sqrt(1-pow(cc_envi,2))    << "\n";
+    std::cout << "---RCST-------Conc:" << Cbin << "-------r_m: " << cc_cntr     << ", E= " << sqrt(1-pow(cc_cntr,2))    << "\n";
+    std::cout << "---RCST-------Spin:" << Sbin << "-------r_m: " << cc_spin     << ", E= " << sqrt(1-pow(cc_spin,2))    << "\n";
+    std::cout << "---RCST----M + E + C + S---r_m: "              << cc_coca     << ", E= " << sqrt(1-pow(cc_coca,2))    << "\n";
+    std::cout << "---RCST----M * E * C * S---r_m: "              << cc_mult     << ", E= " << sqrt(1-pow(cc_mult,2))    << "\n";
     
 
-
-    
 }
 
-
-
-
-
-// covariance of vector of particle catalogue smoothed with radius R (kenel type specified in global variable "KernelFunc").
-// if the vector in size n, then the returned vector has length (n+1)n/2, cov[i,j]==<vpts[i],vpts[j]>
-std::vector<double> covar_of_data_vector_tmp(std::vector<std::vector<Particle>*> vpts, double R)
-{
-    std::vector<double> cov;
-    //auto cov = new std::vector<double>;
-
-    auto wpk = window_Pk(R,0);
-
-    std::vector<fftw_complex*> vec_sc;
-
-    for(auto x : vpts) 
-        vec_sc.push_back(sfc_r2c(sfc(*x),true));
-
-    for(int i = 0; i < vec_sc.size(); ++i)
-        for(int j = i; j < vec_sc.size(); ++j)
-            cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk,true));
-    
-    return cov;
-}
-
-// covariance of vector of particle catalogue. if the vector in size n,
-// then the returned vector has length (n+1)n/2, cov[i,j]==<vpts[i],vpts[j]>
-//std::vector<double> covar_of_data_vector_Multi_radii(std::vector<std::vector<Particle>*> vpts, std::vector<double>){
-//
-//}

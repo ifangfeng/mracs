@@ -62,7 +62,7 @@ std::vector<std::vector<Particle>*> mass_classify_and_push_back(std::vector<doub
     std::vector<std::vector<Particle>*> cata;
     for(int i = 0; i < nbin; ++i) 
         cata.push_back(new std::vector<Particle>);
-        
+
     for(auto x : hl){
         cata[classify_index(node,x.weight)]->push_back(x);
     }
@@ -84,6 +84,18 @@ void print_min_max_and_size(std::vector<Particle>& hl){
             else if(x.weight < min) min = x.weight;
         }
         std::cout << "size: " << hl.size() << ", min: " << min << ", max: " << max << std::endl; 
+    }
+    else 
+        std::cout << "!Empty vector\n";
+}
+void print_min_max_and_size_double(std::vector<double>& vec){
+    if(vec.size() != 0){
+        double min{vec[0]},max{vec[0]};
+        for(auto x : vec){
+            if(x > max) max = x;
+            else if(x < min) min = x;
+        }
+        std::cout << "size: " << vec.size() << ", min: " << min << ", max: " << max << std::endl; 
     }
     else 
         std::cout << "!Empty vector\n";
