@@ -646,3 +646,53 @@ fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::ve
     return vec_sc[1];
 }
 
+
+// vector of {sqrt(lambda),eigen_vector}
+std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT)
+{
+    // ------covariance of each component------
+    std::vector<double> cov;
+
+    auto wpk = window_Pk(R,0);
+
+    std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sfc_r2c(sfc(dm),true));
+
+    // -------size check before eigen solver-----
+    bool EmptySize {false};
+
+    for(auto x : vpts) 
+        if (x->size() < 100) 
+            EmptySize = true;
+
+    if(EmptySize){
+        std::cout << "!EmptySize, some elements will be removed\n";
+        std::cout << "---+bf\n" << "size: ";
+        std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
+        for(int i = 0; i < vpts.size(); ++i) {
+            if(vpts[i]->size() < 100){
+                delete vpts[i];
+                vpts.erase(vpts.begin()+i);
+                --i;
+            }
+        }
+        std::cout << "---+af\n" << "size: ";
+        std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
+    }
+
+    // -------covariance array-------
+    for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
+
+    for(int i = 0; i < vec_sc.size(); ++i)
+        for(int j = i; j < vec_sc.size(); ++j)
+        {   
+            cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk,true));
+        }
+    for(auto x : vec_sc) fftw_free(x);
+
+    // ------solving optimal weight vector------
+    size_t dim{vpts.size()}; 
+    auto solve =  optimal_weight_solver(cov,dim,PRINT);
+
+    return solve;
+}
+

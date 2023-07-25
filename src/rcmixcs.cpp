@@ -1,16 +1,15 @@
 // Hinfo  (double: x, y, z, Mass; int: M, E, C, S)
 #include"mracs.h"
-
+//---Number of Particles: 283116474 of sub005
 int main(int argc, char** argv){
-    read_parameter();
     // ----initial-----
     const int Ebin{4};
     int Mbin{1}, Cbin{1}, Sbin{1};
     
     if(argc!=4){
-        std::cout << "There parameters are needed: MassBin ConcentratrionBin SpinBin\n";
-        std::cout << "each bin parameter should be lager than or equal to 1, e.g.";
-        std::cout << "name:" << " 4, 4, 4\n";
+        std::cout << "Three parameters are needed\n Each bin parameter should be lager than or equal to 1, \n MassBin ConcentratrionBin SpinBin (M C S)\n";
+        std::cout << " e.g.\n";
+        std::cout << argv[0] << " 4 4 4\n"; return 0;
     }
     else {
         for(int i = 1; i < 4; ++i){
@@ -29,6 +28,7 @@ int main(int argc, char** argv){
         std::cout << "parameter space reaching the limit\n";
         std::terminate();
     }
+    read_parameter();
     // ------reading----
     auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
     auto h6 = read_in_Halo_6vector("/data0/MDPL2/halo_Mcut_slice.bin");

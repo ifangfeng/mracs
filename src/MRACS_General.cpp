@@ -58,7 +58,7 @@ std::vector<Particle> generate_random_particle(int x, double L, double w)
             for(int k = 0; k < nps; ++k)
                 p.push_back({safeband + (i + u(e)) * (boxL - 2*safeband) / nps,
                               safeband + (j + u(e)) * (boxL - 2*safeband) / nps,
-                              safeband + (k + u(e)) * (boxL - 2*safeband) / nps});
+                              safeband + (k + u(e)) * (boxL - 2*safeband) / nps, 1.});
     end = clock();
     diff = double(end - begin) / CLOCKS_PER_SEC;
     std::cout << "generating time for " << p.size() << " random points:  " << diff << "s" << std::endl;
