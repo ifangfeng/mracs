@@ -260,3 +260,32 @@ std::vector<Halo> read_in_Halo_6vector(std::string DataDirec){
 
     return p;
 }
+
+
+//
+std::vector<double> read_in_float(std::string DataDirec){
+    std::string ipfname {DataDirec};
+    std::ifstream ifs {ipfname, std::ios_base::binary};
+    if(!ifs){   
+        std::cout << "!Reading " + ipfname + " with error..." << std::endl;
+        std::terminate();
+    }
+    std::chrono::steady_clock::time_point begin0, end0;
+    std::cout << "Reading binary file..." << std::endl;
+    begin0 = std::chrono::steady_clock::now();
+    std::vector<double> p;
+    float a;
+    void* addr = &a;
+
+    while(ifs.read(static_cast<char*>(addr), sizeof(float)))
+        p.push_back(a);
+
+    end0 = std::chrono::steady_clock::now();
+
+    std::cout << "---Number of Particles: " << p.size() << std::endl;
+    std::cout << "Time difference 0 Read_in  = " 
+    << std::chrono::duration_cast<std::chrono::milliseconds>(end0 - begin0).count()
+    << "[ms]" << std::endl;
+
+    return p;
+}

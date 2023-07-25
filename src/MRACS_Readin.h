@@ -66,6 +66,7 @@ std::vector<Particle> read_in_DM_3vector(std::string DataDirec);
 std::vector<Particle> read_in_Halo_4vector(std::string DataDirec);
 std::vector<Particle> read_in_Halo_3vector(std::string DataDirec);
 std::vector<Halo> read_in_Halo_6vector(std::string DataDirec);
+std::vector<double> read_in_float(std::string DataDirec);
 
 
 #endif

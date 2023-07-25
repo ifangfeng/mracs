@@ -10,14 +10,17 @@ int main(){
     read_parameter();
     const int Nbin {4}; // reconstruct bin
     const int Npr {79}; // number of parameters
-    std::list<int> exid {0,2,3,4,5,6,7,8,14,31,32,35,36,57,63,69,70,71,77}; //exclussive index
+    std::list<int> exid {0,2,3,4,5,6,7,8,14,31,32,35,36,57,63,69,70,71,77}; //exclusion index
     
     
+    std::string ifn {"/data0/MDPL2/groups_130/cata_Mcut2e12.dat"};
+
     double a;
     std::vector<double> cata;
-    
-    std::ifstream ifs {"/data0/MDPL2/groups_130/cata_Mcut2e12.dat"};
+    std::ifstream ifs {ifn};
     while(ifs >> a) cata.push_back(a);
+
+    //auto cata = read_in_float(ifn);
     
     if(cata.size()%Npr != 0){
         std::cout << "input error,abort\n";
@@ -27,7 +30,7 @@ int main(){
     int Npart = cata.size()/Npr;
     std::vector<Particle> p(Npart);
     for(size_t i = 0; i < Npart; ++i){
-        p[i] = {cata[i*Npr + 17], cata[i*Npr + 18], cata[i*Npr + 19], cata[i* Npr + 10]}; // x,y,z,Mvir
+        p[i] = {cata[i*Npr + 17], cata[i*Npr + 18], cata[i*Npr + 19], 1.}; // x,y,z,Mvir
     }
 
     std::vector<tuple> ccc;
@@ -76,8 +79,12 @@ int main(){
     }
 
     std::cout << "sorted:\n";
-    for(auto x : ccc) std::cout << "param[" << x.i << "]: r= " << x.x << "\n";
-    std::cout << std::endl;
+    for(int i = 0; auto x : ccc) {
+        std::cout << "param[" << std::setw(2) << x.i << "]: r=" << std::setw(9) << x.x << ",   ";
+        if(i%4 == 3) std::cout << std::endl;
+        ++i;
+    }
+    std::cout << "Nparam: " << ccc.size() << std::endl;
 
 }
 
