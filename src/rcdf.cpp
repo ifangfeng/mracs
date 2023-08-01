@@ -1,4 +1,4 @@
-// scatter of reconstructed halo vs. dark matter catalogue
+// density field
 #include"mracs.h"
 
 
@@ -26,11 +26,11 @@ int main(int argc, char** argv){
     auto hl_m = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
     std::string ifname      {"output/envi_J10_GSR3_halo_Mcut2e12.txt"};
-    std::string ofname_dm   {"output/rcss_dm_THR"+RADII+".txt"};
-    std::string ofname_hl_n {"output/rcss_hl_num_THR"+RADII+".txt"};
-    std::string ofname_hl_m {"output/rcss_hl_mass_THR"+RADII+".txt"};
-    std::string ofname_rc_M {"output/rcss_M_split_THR" + RADII + ".txt"};
-    std::string ofname_rc_ME{"output/rcss_ME_split_THR" + RADII + ".txt"};
+    std::string ofname_dm   {"output/rcdf_dm_THR"+RADII+".txt"};
+    std::string ofname_hl_n {"output/rcdf_hl_n_THR"+RADII+".txt"};
+    std::string ofname_hl_m {"output/rcdf_hl_m_THR"+RADII+".txt"};
+    std::string ofname_rc_M {"output/rcdf_M_split_THR" + RADII + ".txt"};
+    std::string ofname_rc_ME{"output/rcdf_ME_split_THR" + RADII + ".txt"};
 
     std::ofstream ofsdm{ofname_dm}, ofshl_n{ofname_hl_n}, ofshl_m{ofname_hl_m},
     ofsrc_M{ofname_rc_M}, ofsrc_ME{ofname_rc_ME};
@@ -71,8 +71,16 @@ int main(int argc, char** argv){
     #pragma omp parallel for reduction (+:sum_rc_ME)
     for(size_t i = 0; i < GridVol; ++i) sum_rc_ME += s_rc_ME[i];
 
-    size_t N{80};
-    auto p0 = generate_random_particle(N,SimBoxL,0);
+    // ---slice---
+    std::vector<Particle> p0;
+    double Ly{200},Lz{1000};
+    int    Ny{200},Nz{1000};
+    auto y = linear_scale_generator(0,Ly,Ny,false);
+    auto z = linear_scale_generator(0,Lz,Nz,false);
+    for(auto j : y)
+        for(auto k : z){
+            p0.push_back({0,j,k,1.});
+        }
 
     auto n_dm = project_value(s_dm,p0,false);
     auto n_hl_m = project_value(s_hl_m,p0,false);
@@ -81,11 +89,11 @@ int main(int argc, char** argv){
     auto n_rc_ME = project_value(s_rc_ME,p0,false);
 
     
-    for(size_t i = 0; i < N*N*N; ++i) ofsdm << n_dm[i] / sum_dm * GridVol << " ";
-    for(size_t i = 0; i < N*N*N; ++i) ofshl_m << n_hl_m[i] / sum_hl_m * GridVol << " ";
-    for(size_t i = 0; i < N*N*N; ++i) ofshl_n << n_hl_n[i] / sum_hl_n * GridVol << " ";
-    for(size_t i = 0; i < N*N*N; ++i) ofsrc_M << n_rc_M[i] / sum_rc_M * GridVol << " ";
-    for(size_t i = 0; i < N*N*N; ++i) ofsrc_ME << n_rc_ME[i] / sum_rc_ME * GridVol << " ";
+    for(size_t i = 0; i < Ny*Nz; ++i) ofsdm << n_dm[i] / sum_dm * GridVol -1 << " ";
+    for(size_t i = 0; i < Ny*Nz; ++i) ofshl_m << n_hl_m[i] / sum_hl_m * GridVol -1 << " ";
+    for(size_t i = 0; i < Ny*Nz; ++i) ofshl_n << n_hl_n[i] / sum_hl_n * GridVol -1 << " ";
+    for(size_t i = 0; i < Ny*Nz; ++i) ofsrc_M << n_rc_M[i] / sum_rc_M * GridVol -1 << " ";
+    for(size_t i = 0; i < Ny*Nz; ++i) ofsrc_ME << n_rc_ME[i] / sum_rc_ME * GridVol -1 << " ";
     
 }
 

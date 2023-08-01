@@ -254,7 +254,32 @@ std::vector<double> fourier_mode_correlation_1rlz(std::vector<Particle>& dm, std
     return cross;
 }
 
+std::vector<double> fourier_mode_correlation_1rlz(fftw_complex* dm_sc, fftw_complex* hl_sc)
+{
+    double mh[GridLen](0);
+    double mm[GridLen](0);
+    double hh[GridLen](0);
+    
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < (GridLen/2 + 1); ++k){
+                auto ii = i < GridLen/2 + 1 ? i : GridLen - i;
+                auto jj = j < GridLen/2 + 1 ? j : GridLen - j;
+                int ll = sqrt(ii * ii + jj * jj + k * k);
+                auto l = i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k;
 
+                mh[ll] += dm_sc[l][0] * hl_sc[l][0] + dm_sc[l][1] * hl_sc[l][1];
+                mm[ll] += dm_sc[l][0] * dm_sc[l][0] + dm_sc[l][1] * dm_sc[l][1];
+                hh[ll] += hl_sc[l][0] * hl_sc[l][0] + hl_sc[l][1] * hl_sc[l][1];
+            }
+    std::vector<double> cross(GridLen/2 + 1);
+    for(int i = 0; i < GridLen/2 + 1; ++i) cross[i] = mh[i]/sqrt(mm[i] * hh[i]);
+    //fftw_free(dm_sc);
+    //fftw_free(hl_sc);
+    //std::cout << "hihi\n";
+
+    return cross;
+}
 //=======================================================================================
 // covariance of vector of particle catalogue smoothed with radius R (kenel type specified in global variable "KernelFunc").
 // if the vector in size n, then the returned vector has length (n+1)n/2, cov[i,j]==<vpts[i],vpts[j]>

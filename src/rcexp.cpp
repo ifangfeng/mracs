@@ -30,7 +30,7 @@ int main(){
     int Npart = cata.size()/Npr;
     std::vector<Particle> p(Npart);
     for(size_t i = 0; i < Npart; ++i){
-        p[i] = {cata[i*Npr + 17], cata[i*Npr + 18], cata[i*Npr + 19], 1.}; // x,y,z,Mvir
+        p[i] = {cata[i*Npr + 17], cata[i*Npr + 18], cata[i*Npr + 19], cata[i*Npr + 10]}; // x,y,z,Mvir
     }
 
     std::vector<tuple> ccc;
@@ -58,8 +58,9 @@ int main(){
         }
 
     }
-    //std::cout << "orignal:\n";
-    //for(auto x : ccc) std::cout << "param[" << x.i << "]: r= " << x.x << "\n";
+    std::cout << "orignal:\n";
+    for(auto x : ccc) std::cout << x.i << ", "; std::cout << "\n";
+    for(auto x : ccc) std::cout << x.x << ", "; std::cout << "\n";
 
     // -----sorting and print-----
     std::vector<tuple> sorted;
@@ -78,13 +79,14 @@ int main(){
         
     }
 
-    std::cout << "sorted:\n";
+    std::cout << "Sorted: (Nparam= " << ccc.size() << ")\n";
+    std::cout << "[id]: r_m\n";
     for(int i = 0; auto x : ccc) {
-        std::cout << "param[" << std::setw(2) << x.i << "]: r=" << std::setw(9) << x.x << ",   ";
-        if(i%4 == 3) std::cout << std::endl;
+        std::cout << "[" << std::setw(2) << x.i << "]:" << std::setw(9) << x.x << ",    ";
+        if(i%5 == 4) std::cout << std::endl;
         ++i;
     }
-    std::cout << "Nparam: " << ccc.size() << std::endl;
+   
 
 }
 

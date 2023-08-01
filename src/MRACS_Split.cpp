@@ -31,6 +31,27 @@ std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::string ifn, 
     return cata;
 }
 
+std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::vector<int> envi, std::vector<Particle>& hl, int nbin)
+{
+    // ------envi split first--------
+    auto evpts = halo_envi_match_and_split(envi, hl);
+
+    // -----nodes of mass split-----
+    std::vector<double> vecmass(hl.size());
+    #pragma omp parallel for
+    for(size_t i = 0; i < hl.size(); ++i) vecmass[i] = hl[i].weight;
+    auto node = nodes_of_proto_sort(vecmass, nbin);
+
+    // --------sub split-------
+    std::vector<std::vector<Particle>*> cata;
+    for(auto x : evpts){
+        auto tmp = mass_classify_and_push_back(node,*x,nbin);
+        for(auto y : tmp) cata.push_back(y);
+    }
+
+    return cata;
+}
+
 // unlike multi_split, we just concatenate splited sub-cataloges
 std::vector<std::vector<Particle>*> halo_envi_mass_concatenate_split(std::string ifn, std::vector<Particle>& hl, int nbin)
 {
@@ -535,6 +556,27 @@ std::vector<int> envi_vector_readin(std::string ifn, size_t hlsize)
     return envi;
 }
 
+std::vector<int> envi_with_Mcut(std::string ifn, double Mcut, std::vector<Particle>& hl)
+{
+    std::ifstream ifs {ifn};
+    if(!ifs){std::cout << "reading " + ifn + " with error, Abort"; std::terminate();}
+
+    std::vector<int> envi, enviMcut;
+    int temp{0};
+    char comma{0};
+    while(ifs >> temp >> comma) envi.push_back(temp);
+    if(hl.size() == envi.size()) 
+        std::cout << "halo size matched! continue\n"; 
+    else std::terminate();
+
+    for(int i = 0; i < envi.size(); ++i){
+        if(hl[i].weight > Mcut) enviMcut.push_back(envi[i]);
+    }
+    std::vector<int>().swap(envi);
+
+    return enviMcut;
+}
+
 // ************************************************************************************
 // this function return the environmental split halo catalogue and dm as {dm,vd,st,fl,kt}
 // specialized for optimal weight solver 
@@ -562,6 +604,25 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, s
     return result;
 }
 
+std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int> envi, std::vector<Particle>& hl)
+{
+    auto vd = new std::vector<Particle>;
+    auto st = new std::vector<Particle>;
+    auto fl = new std::vector<Particle>;
+    auto kt = new std::vector<Particle>;
+    for(size_t i = 0; i < envi.size(); ++i){
+        if(envi[i] == 0) vd->push_back(hl[i]);
+        else if(envi[i] == 1) st->push_back(hl[i]);
+        else if(envi[i] == 2) fl->push_back(hl[i]);
+        else if(envi[i] == 3) kt->push_back(hl[i]);
+    }
+
+    if(hl.size() != (vd->size() + st->size() + fl->size() + kt->size())) 
+        std::cout << "Warning! halo environment subset size not matched\n";
+    std::vector<std::vector<Particle>*> result{vd,st,fl,kt};
+    
+    return result;
+}
 // ************************************************************************************************************
 // return the fourier of scaling function coefficients of optimal reconstructed halo catalogues, vpts is the
 // vector of dm and splited halo cataloges, in envi-split case: {dm,vd,st,fl,kt}. R specify the smmothing scale
