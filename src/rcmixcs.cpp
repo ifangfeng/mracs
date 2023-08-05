@@ -1,13 +1,13 @@
-// Hinfo  (double: x, y, z, Mass; int: M, E, C, S)
+// Hinfo  (double: x, y, z, Mass; int: M, E, C, D)
 #include"mracs.h"
 //---Number of Particles: 283116474 of sub005
 int main(int argc, char** argv){
     // ----initial-----
     const int Ebin{4};
-    int Mbin{1}, Cbin{1}, Sbin{1};
+    int Mbin{1}, Cbin{1}, Dbin{1};
     
     if(argc!=4){
-        std::cout << "Three parameters are needed\n Each bin parameter should be lager than or equal to 1, \n MassBin ConcentratrionBin SpinBin (M C S)\n";
+        std::cout << "Three parameters are needed\n Each bin parameter should be lager than or equal to 1, \n MassBin ConcentratrionBin LocDensBin (M C D)\n";
         std::cout << " e.g.\n";
         std::cout << argv[0] << " 4 4 4\n"; return 0;
     }
@@ -21,9 +21,9 @@ int main(int argc, char** argv){
         }
         Mbin = std::stoi(argv[1]);
         Cbin = std::stoi(argv[2]);
-        Sbin = std::stoi(argv[3]);
+        Dbin = std::stoi(argv[3]);
     }
-    int Multi_size {Mbin * Ebin * Cbin * Sbin};
+    int Multi_size {Mbin * Ebin * Cbin * Dbin};
     if(Multi_size > 1024) {
         std::cout << "parameter space reaching the limit\n";
         std::terminate();
@@ -41,6 +41,16 @@ int main(int argc, char** argv){
         hl_uni[i] = {h6[i].x,h6[i].y,h6[i].z,1.};
     }
 
+    // ----substitute locDensity for spin----
+    auto s = sfc(hl);
+    auto w = wfc(Radius,0);
+    auto c = convol3d(s,w,true);
+    auto nprj = project_value(c,hl,true);
+    delete[] w;
+    for(size_t i = 0; i < h6.size(); ++i){
+        h6[i].Spin = nprj[i];
+    }
+
 
     // ======================= classify and dispatch halo particles ================
     std::vector<double> vec_mass(h6.size()), vec_cntr(h6.size()), vec_spin(h6.size());
@@ -52,11 +62,11 @@ int main(int argc, char** argv){
     }
     auto node_M = nodes_of_proto_sort(vec_mass, Mbin);
     auto node_C = nodes_of_proto_sort(vec_cntr, Cbin);
-    auto node_S = nodes_of_proto_sort(vec_spin, Sbin);
+    auto node_S = nodes_of_proto_sort(vec_spin, Dbin);
 
     std::cout << "spin:\n";
     std::vector<std::vector<double>*> vv_spin;
-    for(int i = 0; i < Sbin; ++i) vv_spin.push_back(new std::vector<double>);
+    for(int i = 0; i < Dbin; ++i) vv_spin.push_back(new std::vector<double>);
     for(auto x : vec_spin) vv_spin[classify_index(node_S,x)]->push_back(x);
     for(auto x : vv_spin)
         print_min_max_and_size_double(*x);
@@ -66,12 +76,12 @@ int main(int argc, char** argv){
     
     std::vector<std::vector<Particle>*> vpts_mass, vpts_envi, vpts_cntr, vpts_spin;
     std::vector<std::vector<Particle>*> vpts_coca, vpts_mult;
-    for(int i = 0; i < Sbin; ++i) vpts_spin.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Dbin; ++i) vpts_spin.push_back(new std::vector<Particle>);
     for(int i = 0; i < Ebin; ++i) vpts_envi.push_back(new std::vector<Particle>);
     for(int i = 0; i < Cbin; ++i) vpts_cntr.push_back(new std::vector<Particle>);
     for(int i = 0; i < Mbin; ++i) vpts_mass.push_back(new std::vector<Particle>);
-    for(int i = 0; i < Mbin + Cbin + Ebin + Sbin; ++i) vpts_coca.push_back(new std::vector<Particle>);
-    for(int i = 0; i < Mbin * Cbin * Ebin * Sbin; ++i) vpts_mult.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Mbin + Cbin + Ebin + Dbin; ++i) vpts_coca.push_back(new std::vector<Particle>);
+    for(int i = 0; i < Mbin * Cbin * Ebin * Dbin; ++i) vpts_mult.push_back(new std::vector<Particle>);
     
 
     // ------------------- vpts_ M C E S------------------
@@ -82,7 +92,7 @@ int main(int argc, char** argv){
 
     // ------------------- multi-dimension ------------------
     for(size_t i = 0; auto x : h6){
-        vpts_mult[classify_index(node_M,x.Mass) * Cbin * Ebin * Sbin + classify_index(node_C,x.Concentration) * Ebin * Sbin + envi[i] * Sbin + 
+        vpts_mult[classify_index(node_M,x.Mass) * Cbin * Ebin * Dbin + classify_index(node_C,x.Concentration) * Ebin * Dbin + envi[i] * Dbin + 
         classify_index(node_S,x.Spin)]->push_back({x.x,x.y,x.z,x.Mass});
         ++i;
     }
@@ -125,9 +135,9 @@ int main(int argc, char** argv){
     std::cout << "---RCST-------Mass:" << Mbin << "-------r_m: " << cc_mass     << ", E= " << sqrt(1-pow(cc_mass,2))    << "\n";
     std::cout << "---RCST-------Envi:" << Ebin << "-------r_m: " << cc_envi     << ", E= " << sqrt(1-pow(cc_envi,2))    << "\n";
     std::cout << "---RCST-------Conc:" << Cbin << "-------r_m: " << cc_cntr     << ", E= " << sqrt(1-pow(cc_cntr,2))    << "\n";
-    std::cout << "---RCST-------Spin:" << Sbin << "-------r_m: " << cc_spin     << ", E= " << sqrt(1-pow(cc_spin,2))    << "\n";
-    std::cout << "---RCST----M + E + C + S---r_m: "              << cc_coca     << ", E= " << sqrt(1-pow(cc_coca,2))    << "\n";
-    std::cout << "---RCST----M * E * C * S---r_m: "              << cc_mult     << ", E= " << sqrt(1-pow(cc_mult,2))    << "\n";
+    std::cout << "---RCST-------Dens:" << Dbin << "-------r_m: " << cc_spin     << ", E= " << sqrt(1-pow(cc_spin,2))    << "\n";
+    std::cout << "---RCST----M + E + C + D---r_m: "              << cc_coca     << ", E= " << sqrt(1-pow(cc_coca,2))    << "\n";
+    std::cout << "---RCST----M * E * C * D---r_m: "              << cc_mult     << ", E= " << sqrt(1-pow(cc_mult,2))    << "\n";
     
 
 }

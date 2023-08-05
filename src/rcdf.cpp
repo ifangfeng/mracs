@@ -73,14 +73,25 @@ int main(int argc, char** argv){
 
     // ---slice---
     std::vector<Particle> p0;
-    double Ly{200},Lz{1000};
-    int    Ny{200},Nz{1000};
+    const int Nslice {21};
+    int Ly{200},Lz{1000};
+    int    Ny{Ly},Nz{Lz};
     auto y = linear_scale_generator(0,Ly,Ny,false);
     auto z = linear_scale_generator(0,Lz,Nz,false);
-    for(auto j : y)
-        for(auto k : z){
-            p0.push_back({0,j,k,1.});
-        }
+    for(int i = 0; i < Nslice; ++i){
+        std::string nid = std::to_string(i);
+        std::string ofname_dm   {"output/rcdf_dm_THR"+RADII+"_x"+nid+".txt"};
+        std::string ofname_hl_n {"output/rcdf_hl_n_THR"+RADII+"_x"+nid+".txt"};
+        std::string ofname_hl_m {"output/rcdf_hl_m_THR"+RADII+"_x"+nid+".txt"};
+        std::string ofname_rc_M {"output/rcdf_M_split_THR" + RADII+"_x"+nid + ".txt"};
+        std::string ofname_rc_ME{"output/rcdf_ME_split_THR" + RADII+"_x"+nid + ".txt"};
+
+        std::ofstream ofsdm{ofname_dm}, ofshl_n{ofname_hl_n}, ofshl_m{ofname_hl_m},ofsrc_M{ofname_rc_M}, ofsrc_ME{ofname_rc_ME};
+        for(auto j : y)
+            for(auto k : z){
+                p0.push_back({i*SimBoxL/Nslice,j,k,1.});
+            }
+    
 
     auto n_dm = project_value(s_dm,p0,false);
     auto n_hl_m = project_value(s_hl_m,p0,false);
@@ -88,12 +99,19 @@ int main(int argc, char** argv){
     auto n_rc_M = project_value(s_rc_M,p0,false);
     auto n_rc_ME = project_value(s_rc_ME,p0,false);
 
-    
-    for(size_t i = 0; i < Ny*Nz; ++i) ofsdm << n_dm[i] / sum_dm * GridVol -1 << " ";
-    for(size_t i = 0; i < Ny*Nz; ++i) ofshl_m << n_hl_m[i] / sum_hl_m * GridVol -1 << " ";
-    for(size_t i = 0; i < Ny*Nz; ++i) ofshl_n << n_hl_n[i] / sum_hl_n * GridVol -1 << " ";
-    for(size_t i = 0; i < Ny*Nz; ++i) ofsrc_M << n_rc_M[i] / sum_rc_M * GridVol -1 << " ";
-    for(size_t i = 0; i < Ny*Nz; ++i) ofsrc_ME << n_rc_ME[i] / sum_rc_ME * GridVol -1 << " ";
+    std::vector<Particle>().swap(p0);
+    for(size_t i = 0; i < Ny*Nz; ++i) ofsdm << n_dm[i] / sum_dm * GridVol -1 << " ";ofsdm.close();
+    for(size_t i = 0; i < Ny*Nz; ++i) ofshl_m << n_hl_m[i] / sum_hl_m * GridVol -1 << " ";ofshl_m.close();
+    for(size_t i = 0; i < Ny*Nz; ++i) ofshl_n << n_hl_n[i] / sum_hl_n * GridVol -1 << " ";ofshl_n.close();
+    for(size_t i = 0; i < Ny*Nz; ++i) ofsrc_M << n_rc_M[i] / sum_rc_M * GridVol -1 << " ";ofsrc_M.close();
+    for(size_t i = 0; i < Ny*Nz; ++i) ofsrc_ME << n_rc_ME[i] / sum_rc_ME * GridVol -1 << " ";ofsrc_ME.close();
+
+    delete[] n_dm;
+    delete[] n_hl_m;
+    delete[] n_hl_n;
+    delete[] n_rc_M;
+    delete[] n_rc_ME;
+    }
     
 }
 

@@ -24,7 +24,7 @@ double WindowFunction_Sphere(double R, double ki, double kj, double kk)
     return 3*(sin(Phase)-Phase*cos(Phase))/(pow(Phase,3));
 }
 
-// Gaussian window function: e^(-(1/2)(kR)^2)
+// Gaussian window function: e^(-(1/2)(2Pi*kR)^2)
 double WindowFunction_Gaussian(double R, double ki, double kj, double kk)
 {
     double k = sqrt(ki * ki + kj * kj + kk * kk);

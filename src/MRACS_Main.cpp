@@ -269,16 +269,14 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
     // for(auto x : p) total += x.weight;
     // total /= p.size();
 
-    auto s = new double[GridVol]();         // density field coefficients in v_j space
+    
 
     std::chrono::steady_clock::time_point begin1 = std::chrono::steady_clock::now();
 
-    double s_temp[phiSupport * phiSupport * phiSupport];
+    auto s = new double[GridVol]();         // density field coefficients in v_j space
 
-    #pragma omp parallel for reduction (+:s_temp)
-    for(size_t n = 0; n < p.size(); ++n)
-    {
-        for(int ii = 0; ii < phiSupport * phiSupport * phiSupport; ++ii) s_temp[ii] = 0;
+    #pragma omp parallel for
+    for (size_t n = 0; n < p.size(); ++n) {
         // rescale the particle coordinates to MRA framework
         double xx = (p[n].x + v.dx) * ScaleFactor;
         double yy = (p[n].y + v.dy) * ScaleFactor;
@@ -289,7 +287,9 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
         int xxc = floor(xx), xxf = SampRate * (xx - xxc);      
         int yyc = floor(yy), yyf = SampRate * (yy - yyc);      
         int zzc = floor(zz), zzf = SampRate * (zz - zzc);
-    
+
+        double s_temp[phiSupport * phiSupport * phiSupport]{0};
+        
         for(int i = 0; i < phiSupport; ++i)
             for(int j = 0; j < phiSupport; ++j)
                 for(int k = 0; k < phiSupport; ++k)
@@ -297,17 +297,20 @@ double* sfc_offset(std::vector<Particle>& p, Offset v)
                     s_temp[i*phiSupport*phiSupport + j*phiSupport + k] += 
                     phi[xxf + i * SampRate] * phi[yyf + j * SampRate] * phi[zzf + k * SampRate] * p[n].weight;// / total;
                 }
+
         for(int i = 0; i < phiSupport; ++i)
             for(int j = 0; j < phiSupport; ++j)
                 for(int k = 0; k < phiSupport; ++k)
+        #pragma omp atomic
                     s[((xxc - i)&(GridLen - 1))*GridLen*GridLen + ((yyc - j)&(GridLen - 1))*GridLen + ((zzc - k)&(GridLen - 1))] +=
-                    s_temp[i*phiSupport*phiSupport + j*phiSupport + k];        
-    }
+                    s_temp[i*phiSupport*phiSupport + j*phiSupport + k];}
+
 
     std::chrono::steady_clock::time_point end1 = std::chrono::steady_clock::now();
     std::cout << "Time difference 1 sfc3d    = " 
     << std::chrono::duration_cast<std::chrono::milliseconds>(end1 - begin1).count()
     << "[ms]" << std::endl;
+
 
     return s;
 }

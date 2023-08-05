@@ -8,6 +8,193 @@
 #include"MRACS_Corr.h"
 
 
+//============================
+double* tensor_element(fftw_complex* sc, uint dim_i, uint dim_j)
+{
+    if(dim_i > 2 || dim_j > 2){std::cout << "[func: tensor()]: input error!\n"; std::terminate();}
+
+    auto Tk = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+    auto T  = new double[GridVol];
+    
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen; ++i)
+        for(size_t j = 0; j < GridLen; ++j)
+            for(size_t k = 0; k < GridLen/2 +1; ++k){
+                size_t a[3]{i,j,k};
+                double kmodsq = i * i + j * j + k * k;
+                Tk[i * GridLen * (GridLen/2 +1) + j * (GridLen/2 + 1) + k][0] =  a[dim_i] * a[dim_j]/kmodsq * 
+                sc[i * GridLen * (GridLen/2 +1) + j * (GridLen/2 + 1) + k][0];
+                Tk[i * GridLen * (GridLen/2 +1) + j * (GridLen/2 + 1) + k][1] =  a[dim_i] * a[dim_j]/kmodsq * 
+                sc[i * GridLen * (GridLen/2 +1) + j * (GridLen/2 + 1) + k][1];
+            }Tk[0][0] = 0; Tk[0][1] = 0;
+    auto plan = fftw_plan_dft_c2r_3d(GridLen,GridLen,GridLen,Tk,T,FFTW_MEASURE);
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridVol; ++i) T[i] /= GridVol;
+    fftw_execute(plan);
+    fftw_destroy_plan(plan);
+    fftw_free(Tk);
+
+    return T;
+}
+
+
+// solving normalized Poisson equation in Fourier sapce
+double** tidal_tensor(fftw_complex* sc, double* w){
+    auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+    #pragma omp parallel for
+    for(size_t i = 1; i < GridLen * GridLen * (GridLen/2 + 1); ++i){
+        sc1[i][0] = sc[i][0] * w[i] / (sc[0][0] * w[0]);
+        sc1[i][1] = sc[i][1] * w[i] / (sc[0][0] * w[0]);
+    }sc1[0][0] = 0;
+    const uint dim{3};
+
+    auto T = new double*[6];
+    int n{0};
+    for(int i = 0; i < dim; ++i)
+        for(int j = i; j < dim; ++j){
+            T[n] = tensor_element(sc,i,j);
+            ++n;
+        }
+    return T;
+}
+
+// ************************************************************************************
+// solving a 3x3 real symmetric matrix and return the number of eigenvalue 
+// above a threshold Lambda_th = 0
+// ************************************************************************************
+int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz, double lambda_th)
+{
+    int n = 0;
+    double t = xx + yy + zz;
+    double mid1 = 2 * xx - yy - zz;
+    double mid2 = 2 * yy - xx - zz;
+    double mid3 = 2 * zz - xx - yy;
+    double a = xx * xx + yy * yy + zz * zz - xx * yy - xx * zz - yy * zz + 3 * (xy * xy + xz * xz + yz * yz);
+    double b = 9 * (mid1 * yz * yz + mid2 * xz * xz + mid3 * xy * xy) - 54 * xy * xz * yz - mid1 * mid2 * mid3;
+    double phi = M_PI / 6;
+    if(b > 0)
+        phi = atan(sqrt(4 * a * a * a - b * b) / b) / 3.;
+    else if(b < 0)
+        phi = (atan(sqrt(4 * a * a * a - b * b) / b) + M_PI) / 3.;
+    double lambda[3];
+    lambda[0] = (t - 2 * sqrt(a) * cos(phi)) / 3;
+    lambda[1] = (t - 2 * sqrt(a) * cos(phi + 2 * M_PI / 3)) / 3;
+    lambda[2] = (t - 2 * sqrt(a) * cos(phi - 2 * M_PI / 3)) / 3;
+    for(int i = 0; i < 3; ++i)
+        if(lambda[i] > lambda_th)
+            ++n;
+    return n;
+}
+
+
+// ************************************************************************************
+// from Hessian to web structure: 0-Voids, 1-sheets, 2-filaments, 3-knots
+// ************************************************************************************
+std::vector<int> web_classify(double** cxx, std::vector<Particle>& p, double lambda_th)
+{
+    std::vector<int> s(p.size());
+    #pragma omp parallel for
+    for(int i = 0; i < p.size(); ++i)
+    {
+        int xs,ys,zs;   // BSpline have support [0,n+1],not centre in origin
+        int64_t x,y,z,l;   
+        xs = p[i].x / SimBoxL * GridLen + 0.5;
+        ys = p[i].y / SimBoxL * GridLen + 0.5;
+        zs = p[i].z / SimBoxL * GridLen + 0.5;
+        x = (xs - 1) & (GridLen - 1);   // shift -1 for CIC, which is corresponding to BSpline n=1
+        y = (ys - 1) & (GridLen - 1);
+        z = (zs - 1) & (GridLen - 1);
+        l = x * GridLen * GridLen + y * GridLen + z;
+        s[i] = eigen_classify(cxx[0][l], cxx[1][l], cxx[2][l], cxx[3][l], cxx[4][l], cxx[5][l], lambda_th);
+    }
+    return s;
+}
+
+
+// ************************************************************************************
+// from Hessian to web structure on grid: 0-Voids, 1-sheets, 2-filaments, 3-knots
+// ************************************************************************************
+std::vector<int> web_classify_to_grid(double** cxx, double lambda_th)
+{
+    std::vector<int> s(GridVol);
+    #pragma omp parallel for
+    for(int64_t i = 0; i < GridLen; ++i)
+        for(int64_t j = 0; j < GridLen; ++j)
+            for(int64_t k = 0; k < GridLen; ++k)
+            {
+                int64_t x,y,z,l;   // BSpline have support [0,n+1],not centre in origin
+                x = (i - 1) & (GridLen - 1);   // shift -1 for CIC, which is corresponding to BSpline n=1
+                y = (j - 1) & (GridLen - 1);
+                z = (k - 1) & (GridLen - 1);
+                l = x * GridLen * GridLen + y * GridLen + z;
+                s[i * GridLen * GridLen + j * GridLen + k] = eigen_classify(cxx[0][l], cxx[1][l], cxx[2][l], cxx[3][l], cxx[4][l], cxx[5][l], lambda_th);
+            }
+    return s;
+}
+
+
+// ************************************************************************************
+// given dark matter fields dm and Gaussian smoothing radius Rs, return the web classify result at point p0
+// ************************************************************************************
+//std::vector<int> environment(std::vector<Particle>& dm, double Rs, std::vector<Particle>& p0)
+//{
+//    force_base_type(0,1);
+//    force_kernel_type(2);
+//    auto begin = std::chrono::steady_clock::now();
+//
+//    auto sc = sfc_r2c(sfc(dm),true);
+//    auto w = wft(2, 0);
+//    auto cxx = tidal_tensor(sc, w);
+//    auto env = web_classify(cxx,p0);
+//    
+//    fftw_free(sc);
+//    delete[] w;
+//
+//    auto end = std::chrono::steady_clock::now();
+//    std::cout << "Time difference EnvironmentClassify  = "
+//    << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+//    << "[ms]" << std::endl;
+//
+//    return env;
+//}
+
+
+// ************************************************************************************
+// enviriamental parameter array locate in gride point, defined as the number of positive eigenvalue
+// of tidle tensor of matter density fileds, which is obtand by Cloud-in-Cell interpolation of particles
+// to grid point and then smoothed by a Gaussian kernel with radius R. The main process is working on 
+// fourier space so we can take advantage of FFT, for detials see Hahn O., Porciani C., Carollo C. M., Dekel A., 2007, MNRAS, 375, 489
+// https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..489H
+// ************************************************************************************
+double gaussian_radius_from_mass(double m_smooth) 
+{
+    return 1. / sqrt(TWOPI) * pow(m_smooth, 1./3); // rho_bar is needed: [m_smooth / rho_ar]
+}
+
+// ************************************************************************************
+// p[i] = s1[i] * Hermitian[s2[i]]
+// ************************************************************************************
+fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2)
+{
+    auto c = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
+    {
+        c[i][0] = sc1[i][0] * sc2[i][0] + sc1[i][1] * sc2[i][1];
+        c[i][1] = sc1[i][1] * sc2[i][0] - sc1[i][0] * sc2[i][1];
+    }
+
+    return c;
+}
+
+
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
 // we first split halo cataloge to four environmental sub_catalogues then in each sub-cata 
 // further split according halo mass in envi major sequences, halo mass split is an independent parameter
 std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::string ifn, std::vector<Particle>& hl, int nbin)
@@ -122,14 +309,17 @@ void print_min_max_and_size_double(std::vector<double>& vec){
         std::cout << "!Empty vector\n";
 }
 // which vector should trial been push back
-int classify_index(std::vector<double>& node, double trial){
-    int index{0};
-    for(int i = 0; i < node.size(); ++i){
-        if(trial > node[i]) ++index;
-        else break;
-    }
-    return index;
-}
+//int classify_index(std::vector<double>& node, double trial){
+//    int index{0};
+//    for(int i = 0; i < node.size(); ++i){
+//        if(trial > node[i]) ++index;
+//        else break;
+//    }
+//    return index;
+//}
+
+
+
 
 // ************************************************************************************
 // return the nbin fraction node points of a double vector in ascending order
@@ -225,258 +415,6 @@ size_t maximum_index(std::vector<double>& v)
 }
 
 
-
-
-
-
-// ************************************************************************************
-// given a Cloud-in-Cell interpreted 3d density array in fourier space, and the Gaussian
-// kernel also in fourier space, calculate the soothed density fileds and the Hessian 
-// of the gravitation potential fileds (df, xx, xy, xz, yy, yz, zz).return as pointer of 
-// <double> pointer cxx, with cxx[0] the address of df, cxx[1] address of xx and so on.
-// ************************************************************************************
-double** tidal_tensor(fftw_complex* sc, double* w)
-{
-    auto sc0 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
-    auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
-    double** cxx = new double*[7];
-    for(int i = 0; i < 7; ++i){
-        cxx[i] = new double[GridVol];
-    }
-    fftw_plan pldf = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc0, cxx[0], FFTW_MEASURE);
-    fftw_plan plxx = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[1], FFTW_MEASURE);
-    fftw_plan plxy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[2], FFTW_MEASURE);
-    fftw_plan plxz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[3], FFTW_MEASURE);
-    fftw_plan plyy = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[4], FFTW_MEASURE);
-    fftw_plan plyz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[5], FFTW_MEASURE);
-    fftw_plan plzz = fftw_plan_dft_c2r_3d(GridLen, GridLen, GridLen, sc1, cxx[6], FFTW_MEASURE);
-
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
-    {
-        sc0[i][0] = w[i] * sc[i][0];
-        sc0[i][1] = w[i] * sc[i][1]; 
-    }
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k){
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * i / (i*i + j*j + k*k);
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * i * i / (i*i + j*j + k*k); 
-            }
-    sc1[0][0] = 0;
-    sc1[0][1] = 0;
-    fftw_execute(plxx);
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k){
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * j / (i*i + j*j + k*k);
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * i * j / (i*i + j*j + k*k); 
-            }
-    sc1[0][0] = 0;
-    sc1[0][1] = 0;
-    fftw_execute(plxy);
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k){
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * i * k / (i*i + j*j + k*k);
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * i * k / (i*i + j*j + k*k); 
-            }
-    sc1[0][0] = 0;
-    sc1[0][1] = 0;
-    fftw_execute(plxz);
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k){
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * j * j / (i*i + j*j + k*k);
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * j * j / (i*i + j*j + k*k); 
-            }
-    sc1[0][0] = 0;
-    sc1[0][1] = 0;
-    fftw_execute(plyy);
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k){
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * j * k / (i*i + j*j + k*k);
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * j * k / (i*i + j*j + k*k); 
-            }
-    sc1[0][0] = 0;
-    sc1[0][1] = 0;
-    fftw_execute(plyz);
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen; ++i)
-        for(size_t j = 0; j < GridLen; ++j)
-            for(size_t k = 0; k < GridLen/2 + 1; ++k){
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0] * k * k / (i*i + j*j + k*k);
-                sc1[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] = 
-                sc0[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1] * k * k / (i*i + j*j + k*k); 
-            }
-    sc1[0][0] = 0;
-    sc1[0][1] = 0;
-    fftw_execute(plzz);
-    fftw_execute(pldf);
-    
-    fftw_destroy_plan(pldf);
-    fftw_destroy_plan(plxx);
-    fftw_destroy_plan(plxy);
-    fftw_destroy_plan(plxz);
-    fftw_destroy_plan(plyy);
-    fftw_destroy_plan(plyz);
-    fftw_destroy_plan(plzz);
-    fftw_free(sc0);
-    fftw_free(sc1);
-
-    return cxx;
-}
-
-
-
-
-// ************************************************************************************
-// solving a 3x3 real symmetric matrix and return the number of eigenvalue 
-// above a threshold Lambda_th = 0
-// ************************************************************************************
-int eigen_classify(double xx, double xy, double xz, double yy, double yz, double zz)
-{
-    int n = 0;
-    double lambda_th = 0;
-    double t = xx + yy + zz;
-    double mid1 = 2 * xx - yy - zz;
-    double mid2 = 2 * yy - xx - zz;
-    double mid3 = 2 * zz - xx - yy;
-    double a = xx * xx + yy * yy + zz * zz - xx * yy - xx * zz - yy * zz + 3 * (xy * xy + xz * xz + yz * yz);
-    double b = 9 * (mid1 * yz * yz + mid2 * xz * xz + mid3 * xy * xy) - 54 * xy * xz * yz - mid1 * mid2 * mid3;
-    double phi = M_PI / 6;
-    if(b > 0)
-        phi = atan(sqrt(4 * a * a * a - b * b) / b) / 3.;
-    else if(b < 0)
-        phi = (atan(sqrt(4 * a * a * a - b * b) / b) + M_PI) / 3.;
-    double lambda[3];
-    lambda[0] = (t - 2 * sqrt(a) * cos(phi)) / 3;
-    lambda[1] = (t - 2 * sqrt(a) * cos(phi + 2 * M_PI / 3)) / 3;
-    lambda[2] = (t - 2 * sqrt(a) * cos(phi - 2 * M_PI / 3)) / 3;
-    for(int i = 0; i < 3; ++i)
-        if(lambda[i] > lambda_th)
-            ++n;
-    return n;
-}
-
-
-// ************************************************************************************
-// from Hessian to web structure: 0-Voids, 1-sheets, 2-filaments, 3-knots
-// ************************************************************************************
-std::vector<int> web_classify(double** cxx, std::vector<Particle>& p)
-{
-    std::vector<int> s(p.size());
-    #pragma omp parallel for
-    for(int i = 0; i < p.size(); ++i)
-    {
-        int xs,ys,zs;   // BSpline have support [0,n+1],not centre in origin
-        int64_t x,y,z,l;   
-        xs = p[i].x / SimBoxL * GridLen + 0.5;
-        ys = p[i].y / SimBoxL * GridLen + 0.5;
-        zs = p[i].z / SimBoxL * GridLen + 0.5;
-        x = (xs - 1) & (GridLen - 1);   // shift -1 for CIC, which is corresponding to BSpline n=1
-        y = (ys - 1) & (GridLen - 1);
-        z = (zs - 1) & (GridLen - 1);
-        l = x * GridLen * GridLen + y * GridLen + z;
-        s[i] = eigen_classify(cxx[1][l], cxx[2][l], cxx[3][l], cxx[4][l], cxx[5][l], cxx[6][l]);
-    }
-    return s;
-}
-
-
-// ************************************************************************************
-// from Hessian to web structure on grid: 0-Voids, 1-sheets, 2-filaments, 3-knots
-// ************************************************************************************
-std::vector<int> web_classify_to_grid(double** cxx)
-{
-    std::vector<int> s(GridVol);
-    #pragma omp parallel for
-    for(int64_t i = 0; i < GridLen; ++i)
-        for(int64_t j = 0; j < GridLen; ++j)
-            for(int64_t k = 0; k < GridLen; ++k)
-            {
-                int64_t x,y,z,l;   // BSpline have support [0,n+1],not centre in origin
-                x = (i - 1) & (GridLen - 1);   // shift -1 for CIC, which is corresponding to BSpline n=1
-                y = (j - 1) & (GridLen - 1);
-                z = (k - 1) & (GridLen - 1);
-                l = x * GridLen * GridLen + y * GridLen + z;
-                s[i * GridLen * GridLen + j * GridLen + k] = eigen_classify(cxx[1][l], cxx[2][l], cxx[3][l], cxx[4][l], cxx[5][l], cxx[6][l]);
-            }
-    return s;
-}
-
-
-// ************************************************************************************
-// given dark matter fields dm and Gaussian smoothing radius Rs, return the web classify result at point p0
-// ************************************************************************************
-std::vector<int> environment(std::vector<Particle>& dm, double Rs, std::vector<Particle>& p0)
-{
-    force_base_type(0,1);
-    force_kernel_type(2);
-    auto begin = std::chrono::steady_clock::now();
-
-    auto sc = sfc_r2c(sfc(dm),true);
-    auto w = wft(2, 0);
-    auto cxx = tidal_tensor(sc, w);
-    auto env = web_classify(cxx,p0);
-    
-    fftw_free(sc);
-    delete[] w;
-
-    auto end = std::chrono::steady_clock::now();
-    std::cout << "Time difference EnvironmentClassify  = "
-    << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
-    << "[ms]" << std::endl;
-
-    return env;
-}
-
-
-// ************************************************************************************
-// enviriamental parameter array locate in gride point, defined as the number of positive eigenvalue
-// of tidle tensor of matter density fileds, which is obtand by Cloud-in-Cell interpolation of particles
-// to grid point and then smoothed by a Gaussian kernel with radius R. The main process is working on 
-// fourier space so we can take advantage of FFT, for detials see Hahn O., Porciani C., Carollo C. M., Dekel A., 2007, MNRAS, 375, 489
-// https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..489H
-// ************************************************************************************
-double gaussian_radius_from_mass(double m_smooth) 
-{
-    return 1. / sqrt(TWOPI) * pow(m_smooth, 1./3); // rho_bar is needed: [m_smooth / rho_ar]
-}
-
-// ************************************************************************************
-// p[i] = s1[i] * Hermitian[s2[i]]
-// ************************************************************************************
-fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2)
-{
-    auto c = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
-
-    #pragma omp parallel for
-    for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
-    {
-        c[i][0] = sc1[i][0] * sc2[i][0] + sc1[i][1] * sc2[i][1];
-        c[i][1] = sc1[i][1] * sc2[i][0] - sc1[i][0] * sc2[i][1];
-    }
-
-    return c;
-}
 
 // ************************************************************************************
 // input parameter "cov" is returned by "covar_of_data_vector()", which stores the covariance 
