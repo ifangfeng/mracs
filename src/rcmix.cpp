@@ -22,11 +22,12 @@ int main(int argc, char** argv){
     auto hl_uni = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     std::string ifname {"output/envi_J10_GSR3_halo_Mcut2e12.txt"};
 
+    auto envi = envi_vector_readin(ifname,hl.size());
 
-    auto envi_vpts = halo_envi_match_and_split(ifname, hl);
+    auto envi_vpts = halo_envi_match_and_split(envi, hl);
     auto mass_vpts = halo_mass_split(hl, nbin);
-    auto con_vpts  = halo_envi_mass_concatenate_split(ifname, hl, nbin);
-    auto mul_vpts  = halo_envi_mass_multi_split(ifname, hl, nbin);
+    auto con_vpts  = halo_envi_mass_concatenate_split(envi, hl, nbin);
+    auto mul_vpts  = halo_envi_mass_multi_split(envi, hl, nbin);
 
     // ----reconstruct and check-------
     auto sc_hl_uni = sfc_r2c(sfc(hl_uni),true);

@@ -27,11 +27,13 @@ double* tensor_element(fftw_complex* sc, uint dim_i, uint dim_j)
                 Tk[i * GridLen * (GridLen/2 +1) + j * (GridLen/2 + 1) + k][1] =  a[dim_i] * a[dim_j]/kmodsq * 
                 sc[i * GridLen * (GridLen/2 +1) + j * (GridLen/2 + 1) + k][1];
             }Tk[0][0] = 0; Tk[0][1] = 0;
+
     auto plan = fftw_plan_dft_c2r_3d(GridLen,GridLen,GridLen,Tk,T,FFTW_MEASURE);
+    fftw_execute(plan);
 
     #pragma omp parallel for
     for(size_t i = 0; i < GridVol; ++i) T[i] /= GridVol;
-    fftw_execute(plan);
+
     fftw_destroy_plan(plan);
     fftw_free(Tk);
 
@@ -86,6 +88,47 @@ int eigen_classify(double xx, double xy, double xz, double yy, double yz, double
             ++n;
     return n;
 }
+
+std::vector<Point> eigenvalue_of_tidal_tensor(double** cxx,std::vector<Particle>& p){
+    std::vector<Point> vec_eigen(p.size());
+    #pragma omp parallel for
+    for(size_t i = 0; i < p.size(); ++i){
+        int xs,ys,zs;   // BSpline have support [0,n+1],not centre in origin
+        int64_t x,y,z,l;   
+        xs = p[i].x / SimBoxL * GridLen + 0.5;
+        ys = p[i].y / SimBoxL * GridLen + 0.5;
+        zs = p[i].z / SimBoxL * GridLen + 0.5;
+        x = (xs) & (GridLen - 1);   // shift -1 for CIC, which is corresponding to BSpline n=1
+        y = (ys) & (GridLen - 1);
+        z = (zs) & (GridLen - 1);
+        l = x * GridLen * GridLen + y * GridLen + z;
+        vec_eigen[i] = eigen_element(cxx[0][l], cxx[1][l], cxx[2][l], cxx[3][l], cxx[4][l], cxx[5][l]);
+    }
+    return vec_eigen;
+}
+
+Point eigen_element(double xx, double xy, double xz, double yy, double yz, double zz){
+    int n = 0;
+    double t = xx + yy + zz;
+    double mid1 = 2 * xx - yy - zz;
+    double mid2 = 2 * yy - xx - zz;
+    double mid3 = 2 * zz - xx - yy;
+    double a = xx * xx + yy * yy + zz * zz - xx * yy - xx * zz - yy * zz + 3 * (xy * xy + xz * xz + yz * yz);
+    double b = 9 * (mid1 * yz * yz + mid2 * xz * xz + mid3 * xy * xy) - 54 * xy * xz * yz - mid1 * mid2 * mid3;
+    double phi = M_PI / 6;
+    if(b > 0)
+        phi = atan(sqrt(4 * a * a * a - b * b) / b) / 3.;
+    else if(b < 0)
+        phi = (atan(sqrt(4 * a * a * a - b * b) / b) + M_PI) / 3.;
+
+    Point lambda;
+    lambda.x = (t - 2 * sqrt(a) * cos(phi)) / 3;
+    lambda.y = (t - 2 * sqrt(a) * cos(phi + 2 * M_PI / 3)) / 3;
+    lambda.z = (t - 2 * sqrt(a) * cos(phi - 2 * M_PI / 3)) / 3;
+
+    return lambda;
+}
+
 
 
 // ************************************************************************************
@@ -197,28 +240,7 @@ fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2)
 
 // we first split halo cataloge to four environmental sub_catalogues then in each sub-cata 
 // further split according halo mass in envi major sequences, halo mass split is an independent parameter
-std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::string ifn, std::vector<Particle>& hl, int nbin)
-{
-    // ------envi split first--------
-    auto evpts = halo_envi_match_and_split(ifn, hl);
-
-    // -----nodes of mass split-----
-    std::vector<double> vecmass(hl.size());
-    #pragma omp parallel for
-    for(size_t i = 0; i < hl.size(); ++i) vecmass[i] = hl[i].weight;
-    auto node = nodes_of_proto_sort(vecmass, nbin);
-
-    // --------sub split-------
-    std::vector<std::vector<Particle>*> cata;
-    for(auto x : evpts){
-        auto tmp = mass_classify_and_push_back(node,*x,nbin);
-        for(auto y : tmp) cata.push_back(y);
-    }
-
-    return cata;
-}
-
-std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::vector<int> envi, std::vector<Particle>& hl, int nbin)
+std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::vector<int>& envi, std::vector<Particle>& hl, int nbin)
 {
     // ------envi split first--------
     auto evpts = halo_envi_match_and_split(envi, hl);
@@ -240,9 +262,9 @@ std::vector<std::vector<Particle>*> halo_envi_mass_multi_split(std::vector<int> 
 }
 
 // unlike multi_split, we just concatenate splited sub-cataloges
-std::vector<std::vector<Particle>*> halo_envi_mass_concatenate_split(std::string ifn, std::vector<Particle>& hl, int nbin)
+std::vector<std::vector<Particle>*> halo_envi_mass_concatenate_split(std::vector<int>& envi, std::vector<Particle>& hl, int nbin)
 {
-    auto vpts = halo_envi_match_and_split(ifn, hl);
+    auto vpts = halo_envi_match_and_split(envi, hl);
     auto hvpts = halo_mass_split(hl,nbin);
 
     for(auto x : hvpts) vpts.push_back(x);
@@ -519,30 +541,7 @@ std::vector<int> envi_with_Mcut(std::string ifn, double Mcut, std::vector<Partic
 // this function return the environmental split halo catalogue and dm as {dm,vd,st,fl,kt}
 // specialized for optimal weight solver 
 // ************************************************************************************
-std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::string ifn, std::vector<Particle>& hl)
-{
-    auto envi = envi_vector_readin(ifn,hl.size());
-
-    auto vd = new std::vector<Particle>;
-    auto st = new std::vector<Particle>;
-    auto fl = new std::vector<Particle>;
-    auto kt = new std::vector<Particle>;
-    for(size_t i = 0; i < envi.size(); ++i){
-        if(envi[i] == 0) vd->push_back(hl[i]);
-        else if(envi[i] == 1) st->push_back(hl[i]);
-        else if(envi[i] == 2) fl->push_back(hl[i]);
-        else if(envi[i] == 3) kt->push_back(hl[i]);
-    }
-    std::vector<int>().swap(envi);
-
-    if(hl.size() != (vd->size() + st->size() + fl->size() + kt->size())) 
-        std::cout << "Warning! halo environment subset size not matched\n";
-    std::vector<std::vector<Particle>*> result{vd,st,fl,kt};
-    
-    return result;
-}
-
-std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int> envi, std::vector<Particle>& hl)
+std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int>& envi, std::vector<Particle>& hl)
 {
     auto vd = new std::vector<Particle>;
     auto st = new std::vector<Particle>;
@@ -555,12 +554,15 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int> e
         else if(envi[i] == 3) kt->push_back(hl[i]);
     }
 
+    //std::vector<int>().swap(envi);
+
     if(hl.size() != (vd->size() + st->size() + fl->size() + kt->size())) 
         std::cout << "Warning! halo environment subset size not matched\n";
     std::vector<std::vector<Particle>*> result{vd,st,fl,kt};
     
     return result;
 }
+
 // ************************************************************************************************************
 // return the fourier of scaling function coefficients of optimal reconstructed halo catalogues, vpts is the
 // vector of dm and splited halo cataloges, in envi-split case: {dm,vd,st,fl,kt}. R specify the smmothing scale
