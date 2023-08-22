@@ -37,3 +37,4 @@ fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
 std::vector<double> optimal_weight_solver(std::vector<double> cov, int n, bool PRINT);
 fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT);
 std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT);
+std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::vector<Particle>*> vpts, double* wpk, bool PRINT);

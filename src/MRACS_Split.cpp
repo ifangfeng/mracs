@@ -439,9 +439,9 @@ size_t maximum_index(std::vector<double>& v)
 
 
 // ************************************************************************************
-// input parameter "cov" is returned by "covar_of_data_vector()", which stores the covariance 
-// of dm and n splited halo catalogues. By solving A*x=lambda*C*x, return the maximun 
-// square root of lambda and its eigenvector as {sqrt(lambda),eigen_vector}, which has size of n+1
+// return the optimal cross-correlation coefficients r and the corresponding weight vector 
+// as {r_max,eigen_vector},(By solving A*x=lambda*C*x) which has size of n+1, input parameter 
+// "cov" is returned by "covar_of_data_vector()", which stores the covariance of dm and n splited halo catalogues.  
 // ************************************************************************************
 std::vector<double> optimal_weight_solver(std::vector<double> cov, int n, bool PRINT)
 {
@@ -697,3 +697,49 @@ std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std:
     return solve;
 }
 
+// wpk is return by window_pk()
+std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::vector<Particle>*> vpts, double* wpk, bool PRINT)
+{
+    // ------covariance of each component------
+    std::vector<double> cov;
+
+    std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sc_dm);
+
+    // -------size check before eigen solver-----
+    bool EmptySize {false};
+
+    for(auto x : vpts) 
+        if (x->size() < 100) 
+            EmptySize = true;
+
+    if(EmptySize){
+        std::cout << "!EmptySize, some elements will be removed\n";
+        std::cout << "---+bf\n" << "size: ";
+        std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
+        for(int i = 0; i < vpts.size(); ++i) {
+            if(vpts[i]->size() < 100){
+                delete vpts[i];
+                vpts.erase(vpts.begin()+i);
+                --i;
+            }
+        }
+        std::cout << "---+af\n" << "size: ";
+        std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
+    }
+
+    // -------covariance array-------
+    for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
+
+    for(int i = 0; i < vec_sc.size(); ++i)
+        for(int j = i; j < vec_sc.size(); ++j)
+        {   
+            cov.push_back(covar_CombinewithKernel(densityCovarianceArray(vec_sc[i],vec_sc[j]),wpk,true));
+        }
+    for(int i = 1; i < vec_sc.size(); ++i) fftw_free(vec_sc[i]);
+
+    // ------solving optimal weight vector------
+    size_t dim{vpts.size()}; 
+    auto solve =  optimal_weight_solver(cov,dim,PRINT);
+
+    return solve;
+}

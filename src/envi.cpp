@@ -17,11 +17,15 @@ int main(){
     auto cxx = tidal_tensor(sc, w);
     auto env = web_classify(cxx,p2,0);
 
+    const double Lmax{10}; // lambda_th
+    const int Npt{40}; // sampling point
+    auto vec_lth = log_scale_generator(0.1,Lmax,Npt,true);
+
     std::vector<double> vd,st,fl,kt;
     std::vector<double> vd2,st2,fl2,kt2;
-    for(int i = 0; i < 20; ++i){
-        auto envGrid = web_classify_to_grid(cxx,10*i/20.);
-        auto env = web_classify(cxx,p2,10*i/20.);
+    for(int i = 0; i < vec_lth.size(); ++i){
+        auto envGrid = web_classify_to_grid(cxx,vec_lth[i]);
+        auto env = web_classify(cxx,p2,vec_lth[i]);
         int64_t voids{0}, sheets{0}, filaments{0}, knots{0};
         int64_t voids2{0}, sheets2{0}, filaments2{0}, knots2{0};
         for(auto x : envGrid){

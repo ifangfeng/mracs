@@ -605,12 +605,14 @@ void force_base_type(int a, int n)
         else if (BaseType == 1)
         {
             phi = Daubechies_Phi(phiGenus);
+            phiSupport = 2*phiGenus - 1;
         }
         delete[] PowerPhi;
         PowerPhi = PowerPhiFunc(GridLen);
         std::cout << "!BaseType has been forced to: " << BaseType_String << n << "\n";
     }
 }
+
 
 double* symmetryFold_lean(double* wA)
 {
