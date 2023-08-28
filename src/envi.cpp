@@ -6,18 +6,22 @@ using namespace std;
 
 int main(){
     read_parameter();
-    double GSR {2.1}; // Gaussian smoothing radius
-   
-    auto p1 = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
-    auto p2 = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    
+    auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
+    auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
+    force_resoluton_J(10);
+    force_base_type(1,7);
     force_kernel_type(2);
-    auto sc = sfc_r2c(sfc(p1),true);
+
+    double GSR {2.1}; // Gaussian smoothing radius
+
+    auto sc = sfc_r2c(sfc(dm),true);
     auto w = wft(GSR, 0);
     auto cxx = tidal_tensor(sc, w);
-    auto env = web_classify(cxx,p2,0);
+    auto env = web_classify(cxx,hl,0);
 
-    const double Lmax{10}; // lambda_th
+    const double Lmax{20}; // lambda_th
     const int Npt{40}; // sampling point
     auto vec_lth = log_scale_generator(0.1,Lmax,Npt,true);
 
@@ -25,7 +29,7 @@ int main(){
     std::vector<double> vd2,st2,fl2,kt2;
     for(int i = 0; i < vec_lth.size(); ++i){
         auto envGrid = web_classify_to_grid(cxx,vec_lth[i]);
-        auto env = web_classify(cxx,p2,vec_lth[i]);
+        auto env = web_classify(cxx,hl,vec_lth[i]);
         int64_t voids{0}, sheets{0}, filaments{0}, knots{0};
         int64_t voids2{0}, sheets2{0}, filaments2{0}, knots2{0};
         for(auto x : envGrid){

@@ -308,24 +308,28 @@ std::vector<std::vector<Particle>*> mass_classify_and_push_back(std::vector<doub
 
 void print_min_max_and_size(std::vector<Particle>& hl){
     if(hl.size() != 0){
+        double sum{0};
         double min{hl[0].weight},max{hl[0].weight};
         for(auto x : hl){
+            sum += x.weight;
             if(x.weight > max) max = x.weight;
             else if(x.weight < min) min = x.weight;
         }
-        std::cout << "size: " << hl.size() << ", min: " << min << ", max: " << max << std::endl; 
+        std::cout << "size: " << hl.size() << ", min: " << min << ", max: " << max << ", ave: " << sum/hl.size() << std::endl; 
     }
     else 
         std::cout << "!Empty vector\n";
 }
 void print_min_max_and_size_double(std::vector<double>& vec){
     if(vec.size() != 0){
+        double sum{0};
         double min{vec[0]},max{vec[0]};
         for(auto x : vec){
+            sum += x;
             if(x > max) max = x;
             else if(x < min) min = x;
         }
-        std::cout << "size: " << vec.size() << ", min: " << min << ", max: " << max << std::endl; 
+        std::cout << "size: " << vec.size() << ", min: " << min << ", max: " << max << ", ave: " << sum/vec.size() << std::endl; 
     }
     else 
         std::cout << "!Empty vector\n";
@@ -559,6 +563,8 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int>& 
     if(hl.size() != (vd->size() + st->size() + fl->size() + kt->size())) 
         std::cout << "Warning! halo environment subset size not matched\n";
     std::vector<std::vector<Particle>*> result{vd,st,fl,kt};
+
+    for(auto x : result) print_min_max_and_size(*x);
     
     return result;
 }
@@ -580,9 +586,10 @@ fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::ve
 
     // -------size check before eigen solver-----
     bool EmptySize {false};
+    const int ThdSize {100}; 
 
     for(auto x : vpts) 
-        if (x->size() < 100) 
+        if (x->size() < ThdSize) 
             EmptySize = true;
 
     if(EmptySize){
@@ -590,7 +597,7 @@ fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::ve
         std::cout << "---+bf\n" << "size: ";
         std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
         for(int i = 0; i < vpts.size(); ++i) {
-            if(vpts[i]->size() < 100){
+            if(vpts[i]->size() < ThdSize){
                 delete vpts[i];
                 vpts.erase(vpts.begin()+i);
                 --i;
