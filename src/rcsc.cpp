@@ -58,9 +58,8 @@ int main(int argc, char** argv){
     force_kernel_type(1);
 
     auto sc_dm   = sfc_r2c(sfc(dm),true);
-    auto sc_hl_m = sfc_r2c(sfc(hl_m),true);
     auto sc_hl_n = sfc_r2c(sfc(hl_n),true);
-
+    auto sc_hl_m = sfc_r2c(sfc(hl_m),true);
     auto sc_rc_M = optimal_reconstruct(dm,vpts_M,Radius,true);
     auto sc_rc_ME = optimal_reconstruct(dm,vpts_ME,Radius,true);
 

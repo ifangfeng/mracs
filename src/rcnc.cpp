@@ -1,4 +1,4 @@
-// density field
+// noise cancelling
 #include"mracs.h"
 
 
@@ -8,15 +8,10 @@ int main(){
     double l_th_opt{9.5};
 
     auto dm   = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
-    auto hl_temp   = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    auto hl_m = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    auto hl_n = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
-    std::vector<Particle> hl,hl_n;
-    for(auto x : hl_temp){
-        if(x.weight > 1e13) {
-            hl.push_back(x);
-            hl_n.push_back({x.x,x.y,x.z,1.});
-        }
-    }
+    std::vector<double> bias{1.16,1.73,1.46,1.47};
 
     force_resoluton_J(10);
     force_kernel_type(2);

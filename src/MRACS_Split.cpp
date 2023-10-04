@@ -575,14 +575,14 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int>& 
 // which decide the reconstruct coeefficient of each halo component (weight vector), after solving weight
 // vector we then reconstruct the halo fields with optimal weight and return as fourier of sfc coefficients
 // ************************************************************************************************************
-fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT)
+fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT)
 {
     // ------covariance of each component------
     std::vector<double> cov;
 
     auto wpk = window_Pk(R,0);
 
-    std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sfc_r2c(sfc(dm),true));
+    std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sc_dm);
 
     // -------size check before eigen solver-----
     bool EmptySize {false};
@@ -648,8 +648,6 @@ fftw_complex* optimal_reconstruct(std::vector<Particle>& dm, std::vector<std::ve
         }
         fftw_free(vec_sc[i]);
     }
-
-    fftw_free(vec_sc[0]);
 
     return vec_sc[1];
 }

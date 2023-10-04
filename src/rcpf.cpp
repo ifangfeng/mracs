@@ -5,9 +5,11 @@
 int main(){
     read_parameter();
 
-    auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
+    
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
-
+    auto vpts = halo_mass_split(hl,4);
+    return 0;
+    auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
     // ------environmental classify---------
     force_resoluton_J(10);
     force_base_type(1,7);

@@ -144,7 +144,7 @@ double* densityPowerFFT(fftw_complex* sc)
     #pragma omp parallel for
     for(size_t i = 0; i < PkASize; ++i) Pk_array[i] = pow(sc[i][0], 2) + pow(sc[i][1], 2);
 
-    int64_t klen = GridLen;
+    int64_t klen = GridLen/2 + 1;
     int nk[klen]{0};
     double* Pk = new double[klen]();
 
@@ -189,7 +189,7 @@ double* densityPowerDWT(fftw_complex* sc)
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Pk power, T = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 
-    int64_t klen = GridLen;
+    int64_t klen = GridLen/2 + 1;
     int nk[klen]{0};
     double* Pk = new double[klen]();
     
@@ -274,9 +274,6 @@ std::vector<double> fourier_mode_correlation_1rlz(fftw_complex* dm_sc, fftw_comp
             }
     std::vector<double> cross(GridLen/2 + 1);
     for(int i = 0; i < GridLen/2 + 1; ++i) cross[i] = mh[i]/sqrt(mm[i] * hh[i]);
-    //fftw_free(dm_sc);
-    //fftw_free(hl_sc);
-    //std::cout << "hihi\n";
 
     return cross;
 }
