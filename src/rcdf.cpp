@@ -1,4 +1,4 @@
-// density field
+// density map strips
 #include"mracs.h"
 
 

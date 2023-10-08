@@ -11,25 +11,21 @@ int main(){
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
     force_resoluton_J(10);
-    force_base_type(1,4);
+    force_base_type(0,1);
     force_kernel_type(2);
 
-    double GSR {1.95}; // Gaussian smoothing radius
+    auto vec_GSR = linear_scale_generator(1,10,10,true);
 
     auto sc = sfc_r2c(sfc(dm),true);
-    auto w_gs = wft(GSR, 0);
-    auto cxx = tidal_tensor(sc, w_gs);
-    auto env = web_classify(cxx,hl,0);
-
-    const double Lmax{20}; // lambda_th
-    const int Npt{40}; // sampling point
-    auto vec_lth = log_scale_generator(0.1,Lmax,Npt,true);
-
     std::vector<double> vd,st,fl,kt;
     std::vector<double> vd2,st2,fl2,kt2;
-    for(int i = 0; i < vec_lth.size(); ++i){
-        auto envGrid = web_classify_to_grid(cxx,vec_lth[i]);
-        auto env = web_classify(cxx,hl,vec_lth[i]);
+    for(auto GSR : vec_GSR){
+        std::cout << GSR << '\n';
+        auto w_gs = wft(GSR, 0);
+        auto cxx = tidal_tensor(sc, w_gs);
+
+        auto envGrid = web_classify_to_grid(cxx,0);
+        auto env = web_classify(cxx,hl,0);
         int64_t voids{0}, sheets{0}, filaments{0}, knots{0};
         int64_t voids2{0}, sheets2{0}, filaments2{0}, knots2{0};
         for(auto x : envGrid){
@@ -56,12 +52,15 @@ int main(){
         st2.push_back(sheets2/sum2);
         fl2.push_back(filaments2/sum2);
         kt2.push_back(knots2/sum2);
-        std::cout << i << "\n";
+
+        delete[] w_gs;
+        for(int i = 0; i < 6; ++i) delete[] cxx[i];delete[] cxx;
     }
-    std::ofstream ofn_vff_vd{"output/VFF_vd.txt"},ofn_HF_vd{"output/HF_vd.txt"};
-    std::ofstream ofn_vff_st{"output/VFF_st.txt"},ofn_HF_st{"output/HF_st.txt"};
-    std::ofstream ofn_vff_fl{"output/VFF_fl.txt"},ofn_HF_fl{"output/HF_fl.txt"};
-    std::ofstream ofn_vff_kt{"output/VFF_kt.txt"},ofn_HF_kt{"output/HF_kt.txt"};
+
+    std::ofstream ofn_vff_vd{"output/VF_vd_diffGSR.txt"},ofn_HF_vd{"output/NF_vd_diffGSR.txt"};
+    std::ofstream ofn_vff_st{"output/VF_st_diffGSR.txt"},ofn_HF_st{"output/NF_st_diffGSR.txt"};
+    std::ofstream ofn_vff_fl{"output/VF_fl_diffGSR.txt"},ofn_HF_fl{"output/NF_fl_diffGSR.txt"};
+    std::ofstream ofn_vff_kt{"output/VF_kt_diffGSR.txt"},ofn_HF_kt{"output/NF_kt_diffGSR.txt"};
 
     for(auto x : vd) ofn_vff_vd << x << " ";
     for(auto x : st) ofn_vff_st << x << " ";

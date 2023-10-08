@@ -8,15 +8,9 @@ int main(){
     double l_th_opt{9.5};
 
     auto dm   = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
-    auto hl_temp   = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
-
-    std::vector<Particle> hl,hl_n;
-    for(auto x : hl_temp){
-        if(x.weight > 1e13) {
-            hl.push_back(x);
-            hl_n.push_back({x.x,x.y,x.z,1.});
-        }
-    }
+    auto hl   = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    auto hl_n = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
+    
 
     force_resoluton_J(10);
     force_kernel_type(2);
@@ -45,8 +39,8 @@ int main(){
     auto sc_hl_m = sfc_r2c(sfc(hl),true);
     auto sc_hl_n = sfc_r2c(sfc(hl_n),true);
 
-    std::ofstream ofs_hl_n {"output/rcck_Mcut1e13_hl_n.txt"};
-    std::ofstream ofs_hl_m {"output/rcck_Mcut1e13_hl_m.txt"};
+    std::ofstream ofs_hl_n {"output/rcck_hl_n.txt"};
+    std::ofstream ofs_hl_m {"output/rcck_hl_m.txt"};
 
     auto ck_n = fourier_mode_correlation_1rlz(sc_dm,sc_hl_n);
     auto ck_m = fourier_mode_correlation_1rlz(sc_dm,sc_hl_m);
@@ -56,8 +50,8 @@ int main(){
 
     for(auto r : vec_r){
 
-        std::ofstream ofs_rc_M {"output/rcck_Mcut1e13_M_split_THRR" + std::to_string(r) + ".txt"};
-        std::ofstream ofs_rc_ME{"output/rcck_Mcut1e13_ME_split_THRR" + std::to_string(r) + ".txt"};
+        std::ofstream ofs_rc_M {"output/rcck_M_split_THRR" + std::to_string(r) + ".txt"};
+        std::ofstream ofs_rc_ME{"output/rcck_ME_split_THRR" + std::to_string(r) + ".txt"};
 
         auto sc_rc_M = optimal_reconstruct(dm,vpts_M,r,true);
         auto sc_rc_ME = optimal_reconstruct(dm,vpts_ME,r,true);

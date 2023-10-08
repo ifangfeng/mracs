@@ -46,8 +46,8 @@ double** tidal_tensor(fftw_complex* sc, double* w){
     auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     #pragma omp parallel for
     for(size_t i = 1; i < GridLen * GridLen * (GridLen/2 + 1); ++i){
-        sc1[i][0] = sc[i][0] * w[i] / (sc[0][0] * w[0]);
-        sc1[i][1] = sc[i][1] * w[i] / (sc[0][0] * w[0]);
+        sc1[i][0] = sc[i][0] * w[i] / (sc[0][0] / GridVol * w[0]);
+        sc1[i][1] = sc[i][1] * w[i] / (sc[0][0] / GridVol * w[0]);
     }sc1[0][0] = 0;
     const uint dim{3};
 
@@ -55,7 +55,7 @@ double** tidal_tensor(fftw_complex* sc, double* w){
     int n{0};
     for(int i = 0; i < dim; ++i)
         for(int j = i; j < dim; ++j){
-            T[n] = tensor_element(sc,i,j);
+            T[n] = tensor_element(sc1,i,j);
             ++n;
         }
     return T;
