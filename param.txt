@@ -20,4 +20,4 @@ DataDirec                       /data0/MDPL2/dm_sub/dm_sub5e-5.bin
 SimBoxL                         1000 % Mpc/h
 
 %---Number_of_threads_used
-Threads                         64
+Threads                         128

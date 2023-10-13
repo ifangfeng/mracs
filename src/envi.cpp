@@ -14,7 +14,7 @@ int main(){
     force_base_type(1,4);
     force_kernel_type(2);
 
-    double GSR {1.95}; // Gaussian smoothing radius
+    double GSR {2.1}; // Gaussian smoothing radius
 
     auto sc = sfc_r2c(sfc(dm),true);
     auto w_gs = wft(GSR, 0);

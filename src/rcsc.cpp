@@ -2,30 +2,20 @@
 #include"mracs.h"
 
 
-int main(int argc, char** argv){
+int main(){
     read_parameter();
     
-    int Mbin{0};
     const int Ebin{4};
+    const int Mbin{4};
+    double THR{30};
+    double GSR{1}; // Gaussian smoothing radius
+    double l_th_opt{20}; // optimal lambda_th
 
-    if(argc==1){
-        Mbin = 4;
-    }
-    else {
-        int n = std::stoi(argv[1]);
-        if ((n >= 1) && (n <= 128))
-            Mbin = n;
-        else {
-            std::cout << "input error, abort\n";
-            return 0;
-        }
-    }
-
-    std::string ofname_dm   {"output/rcss_bin"+std::to_string(Mbin)+"_dm_THR"+RADII+".txt"};
-    std::string ofname_hl_n {"output/rcss_bin"+std::to_string(Mbin)+"_hl_num_THR"+RADII+".txt"};
-    std::string ofname_hl_m {"output/rcss_bin"+std::to_string(Mbin)+"_hl_mass_THR"+RADII+".txt"};
-    std::string ofname_rc_M {"output/rcss_bin"+std::to_string(Mbin)+"_M_split_THR" + RADII + ".txt"};
-    std::string ofname_rc_ME{"output/rcss_bin"+std::to_string(Mbin)+"_ME_split_THR" + RADII + ".txt"};
+    std::string ofname_dm   {"output/rcss_bin"+std::to_string(Mbin)+"_dm_THR"+std::to_string(THR)+".txt"};
+    std::string ofname_hl_n {"output/rcss_bin"+std::to_string(Mbin)+"_hl_num_THR"+std::to_string(THR)+".txt"};
+    std::string ofname_hl_m {"output/rcss_bin"+std::to_string(Mbin)+"_hl_mass_THR"+std::to_string(THR)+".txt"};
+    std::string ofname_rc_M {"output/rcss_bin"+std::to_string(Mbin)+"_M_split_THR" + std::to_string(THR) + ".txt"};
+    std::string ofname_rc_ME{"output/rcss_bin"+std::to_string(Mbin)+"_ME_split_THR" + std::to_string(THR) + ".txt"};
 
     std::ofstream ofsdm{ofname_dm}, ofshl_n{ofname_hl_n}, ofshl_m{ofname_hl_m},
     ofsrc_M{ofname_rc_M}, ofsrc_ME{ofname_rc_ME};
@@ -37,16 +27,15 @@ int main(int argc, char** argv){
     auto hl_m = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
     // ------environment sticker---------
     force_resoluton_J(10);
-    force_base_type(1,7);
+    force_base_type(1,4);
     force_kernel_type(2);
-    double GSR {2.1}; // Gaussian smoothing radius
-
+    
     auto sc = sfc_r2c(sfc(dm),true);
     auto w_gs = wft(GSR, 0);
     auto cxx = tidal_tensor(sc, w_gs);
     fftw_free(sc);
-    double l_th_max{7.5}; // optimal lambda_th
-    auto envi =  web_classify(cxx,hl_m,l_th_max);
+    
+    auto envi =  web_classify(cxx,hl_m,l_th_opt);
 
 
     // ----reconstruct-------
@@ -60,10 +49,10 @@ int main(int argc, char** argv){
     auto sc_dm   = sfc_r2c(sfc(dm),true);
     auto sc_hl_n = sfc_r2c(sfc(hl_n),true);
     auto sc_hl_m = sfc_r2c(sfc(hl_m),true);
-    auto sc_rc_M = optimal_reconstruct(dm,vpts_M,Radius,true);
-    auto sc_rc_ME = optimal_reconstruct(dm,vpts_ME,Radius,true);
+    auto sc_rc_M = optimal_reconstruct(sc_dm,vpts_M,THR,true);
+    auto sc_rc_ME = optimal_reconstruct(sc_dm,vpts_ME,THR,true);
 
-    auto w = wfc(Radius,0);
+    auto w = wfc(THR,0);
     auto s_dm = convol_c2r(sc_dm, w);
     auto s_hl_m = convol_c2r(sc_hl_m, w);
     auto s_hl_n = convol_c2r(sc_hl_n, w);

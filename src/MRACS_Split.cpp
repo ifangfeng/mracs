@@ -48,6 +48,8 @@ double** tidal_tensor(fftw_complex* sc, double* w){
     for(size_t i = 1; i < GridLen * GridLen * (GridLen/2 + 1); ++i){
         sc1[i][0] = sc[i][0] * w[i] / (sc[0][0] / GridVol * w[0]);
         sc1[i][1] = sc[i][1] * w[i] / (sc[0][0] / GridVol * w[0]);
+        // sc1[i][0] = sc[i][0] / (sc[0][0] / GridVol);
+        // sc1[i][1] = sc[i][1] / (sc[0][0] / GridVol);
     }sc1[0][0] = 0;
     const uint dim{3};
 
@@ -586,7 +588,7 @@ fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<P
 
     // -------size check before eigen solver-----
     bool EmptySize {false};
-    const int ThdSize {100}; 
+    const int ThdSize {2}; 
 
     for(auto x : vpts) 
         if (x->size() < ThdSize) 
@@ -665,9 +667,10 @@ std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std:
 
     // -------size check before eigen solver-----
     bool EmptySize {false};
+    const int ThdSize {2};
 
     for(auto x : vpts) 
-        if (x->size() < 100) 
+        if (x->size() < ThdSize) 
             EmptySize = true;
 
     if(EmptySize){
@@ -675,7 +678,7 @@ std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std:
         std::cout << "---+bf\n" << "size: ";
         std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
         for(int i = 0; i < vpts.size(); ++i) {
-            if(vpts[i]->size() < 100){
+            if(vpts[i]->size() < ThdSize){
                 delete vpts[i];
                 vpts.erase(vpts.begin()+i);
                 --i;
@@ -712,9 +715,10 @@ std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::
 
     // -------size check before eigen solver-----
     bool EmptySize {false};
+    const int ThdSize {2};
 
     for(auto x : vpts) 
-        if (x->size() < 100) 
+        if (x->size() < ThdSize) 
             EmptySize = true;
 
     if(EmptySize){
@@ -722,7 +726,7 @@ std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::
         std::cout << "---+bf\n" << "size: ";
         std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
         for(int i = 0; i < vpts.size(); ++i) {
-            if(vpts[i]->size() < 100){
+            if(vpts[i]->size() < ThdSize){
                 delete vpts[i];
                 vpts.erase(vpts.begin()+i);
                 --i;

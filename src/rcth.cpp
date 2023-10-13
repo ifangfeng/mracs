@@ -8,16 +8,16 @@ int main(){
 
     // ------environment sticker---------
     force_resoluton_J(10);
-    force_base_type(1,7);
+    force_base_type(1,4);
     force_kernel_type(2);
 
-    double GSR {15}; // Gaussian smoothing radius
+    double GSR {1}; // Gaussian smoothing radius
 
     auto sc = sfc_r2c(sfc(dm),true);
     auto w_gs = wft(GSR, 0);
     auto cxx = tidal_tensor(sc, w_gs);
     
-    auto vec_lth = linear_scale_generator(0,10,40,true);
+    auto vec_lth = linear_scale_generator(0,50,200,true);
     std::vector<std::vector<int>> vec_env;
     for(auto l_th : vec_lth) {
         auto envi =  web_classify(cxx,hl,l_th);
@@ -33,14 +33,14 @@ int main(){
     force_base_type(1,4);
     force_kernel_type(1);
 
-    double THR{15};
+    double THR{30};
     auto sc_dm = sfc_r2c(sfc(dm),true);
     auto wpk = window_Pk(THR,0);
 
-    const int LINE{3};
+    const int LINE{1};
     std::vector<double> cc_mul;
     for(size_t i = 0; i < LINE; ++i){
-        int Mbin = 1UL<<i;
+        int Mbin = 4;//1UL<<i;
         std::cout << "Mbin = " << Mbin << "\n";
         for(auto env : vec_env){
             auto mul_vpts  = halo_envi_mass_multi_split(env, hl, Mbin);
