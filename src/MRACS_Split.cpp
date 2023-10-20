@@ -577,7 +577,7 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int>& 
 // which decide the reconstruct coeefficient of each halo component (weight vector), after solving weight
 // vector we then reconstruct the halo fields with optimal weight and return as fourier of sfc coefficients
 // ************************************************************************************************************
-fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT)
+fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT)
 {
     // ------covariance of each component------
     std::vector<double> cov;
@@ -656,7 +656,7 @@ fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<P
 
 
 // vector of {sqrt(lambda),eigen_vector}
-std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std::vector<Particle>*> vpts, double R, bool PRINT)
+std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT)
 {
     // ------covariance of each component------
     std::vector<double> cov;
@@ -706,7 +706,7 @@ std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std:
 }
 
 // wpk is return by window_pk()
-std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::vector<Particle>*> vpts, double* wpk, bool PRINT)
+std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::vector<Particle>*>& vpts, double* wpk, bool PRINT)
 {
     // ------covariance of each component------
     std::vector<double> cov;

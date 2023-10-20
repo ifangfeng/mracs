@@ -29,6 +29,27 @@ double covar_CombinewithKernel(double* pk_plus, double* WinPk, bool DELET_pk_plu
     return sum/temp-1;
 }
 
+// ************************************************************************************
+// return the raw covariance i.e. no window smoothing of two density fields,
+// pk_plus is returned by densityCovarianceArray or densityVarianceArray.
+// ************************************************************************************
+double covar_Raw(double* pk_plus, bool DELET_pk_plus)
+{
+    double sum{0};
+    #pragma omp parallel for reduction (+: sum)
+    for(int64_t i = 1 - GridLen; i < GridLen; ++i)
+        for(int64_t j = 1 - GridLen; j < GridLen; ++j)
+            for(int64_t k = 1 - GridLen; k < GridLen; ++k)
+            {
+                sum += pk_plus[(i+GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (j+GridLen-1) * (2*GridLen-1) + (k+GridLen-1)];
+            }
+    double temp = pk_plus[(GridLen-1) * (2*GridLen-1) * (2*GridLen-1) + (GridLen-1) * (2*GridLen-1) + (GridLen-1)];
+
+    if(DELET_pk_plus) delete pk_plus;
+
+    return sum/temp-1;
+}
+
 
 // ************************************************************************************
 // FINE is integral finer parameter and takes value from set {0,1,2,3,4,5}
@@ -163,8 +184,8 @@ double* densityPowerFFT(fftw_complex* sc)
     {
         if(nk[i] != 0)
         Pk[i] /= nk[i];
-        Pk[i] /= pow(npart,2);
-        //Pk[i] -= 1./pow(npart,1); // poission shot noise
+        Pk[i] /= pow(npart,2) / pow(SimBoxL,3);
+        //Pk[i] -= pow(SimBoxL,3) / npart; // poission shot noise
     }
     Pk[0]=0;
 
@@ -210,14 +231,14 @@ double* densityPowerDWT(fftw_complex* sc)
     {
         if(nk[i] != 0)
         Pk[i] /= nk[i];
-        Pk[i] /= pow(npart,2);
+        Pk[i] /= pow(npart,2) / pow(SimBoxL,3);
         
     }
     Pk[0]=0;
    
     return Pk;
 }
-//Pk[i] -= 1./pow(npart,1); // poission shot noise
+//Pk[i] -= pow(SimBoxL,3) / npart; // poission shot noise
 
 
 

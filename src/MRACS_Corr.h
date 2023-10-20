@@ -1,6 +1,7 @@
 #include"MRACS_Main.h"
 
 double covar_CombinewithKernel(double* pk_plus, double* WinPk, bool DELET_pk_plus);
+double covar_Raw(double* pk_plus, bool DELET_pk_plus);
 double Pk_variance_2dRH(double* Pk, const double Radius, const double theta, int FINE);
 double* densityCovarianceArray(fftw_complex* sc1,fftw_complex* sc2);
 double* densityVarianceArray(fftw_complex* sc);

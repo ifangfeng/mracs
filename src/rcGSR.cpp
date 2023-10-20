@@ -7,15 +7,17 @@ int main(){
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
     auto hl_n = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
-    std::vector<double> vec_gsr {8, 5, 3, 2, 1.5, 1, 0.5};
-    std::vector<double> vec_lth = linear_scale_generator(0,10,40,true);
+    std::vector<double> vec_gsr {1.5,1,0.5};
+    std::vector<double> vec_lth = linear_scale_generator(0,50,200,true);
     std::vector<std::vector<int>> vec_env;
-    std::ofstream ofs {"output/rcgsrTHR15.txt"};
+    std::ofstream ofs {"output/rcgsrTHR30-s.txt"};
+    std::string para{"JE="};
 
     // ------environment sticker---------
-    force_resoluton_J(10);
+    force_resoluton_J(11);
     force_base_type(1,4);
     force_kernel_type(2);
+    para+=std::to_string(Resolution);
 
     auto sc = sfc_r2c(sfc(dm),true);
     for(auto GSR : vec_gsr){
@@ -35,8 +37,9 @@ int main(){
     force_resoluton_J(7);
     force_base_type(1,4);
     force_kernel_type(1);
+    para+=" , JC="+std::to_string(Resolution);
 
-    double THR{15};
+    double THR{30};
     auto sc_dm = sfc_r2c(sfc(dm),true);
     auto wpk = window_Pk(THR,0);
 
@@ -49,6 +52,7 @@ int main(){
             auto vpts = halo_envi_match_and_split(env,hl);
             auto sol  = optimal_solution_lean(sc_dm,vpts,wpk,false);
             cc_env_M.push_back(sol[0]);
+            for(auto x : vpts) if(x->size()) std::vector<Particle>().swap(*x);
         }
     }
     for(size_t i = 0; i < vec_gsr.size(); ++i){
@@ -56,6 +60,7 @@ int main(){
             auto vpts = halo_envi_match_and_split(env,hl_n);
             auto sol  = optimal_solution_lean(sc_dm,vpts,wpk,false);
             cc_env_N.push_back(sol[0]);
+            for(auto x : vpts) if(x->size()) std::vector<Particle>().swap(*x);
         }
     }
     // ---M---
@@ -68,6 +73,7 @@ int main(){
     }
     
     //---output---
+    ofs << para << '\n';
     ofs << "----->Mass weighted halo: GSR= "; for(auto x : vec_gsr) ofs << x << ", ";ofs << '\n';
     for(int i = 0; i < vec_gsr.size(); ++i){
         for(int j = 0; j < vec_lth.size(); ++j)
