@@ -8,8 +8,8 @@ int main(){
     const int Mbin{4};
     double THR{15};
     double GSR{1}; // Gaussian smoothing radius
-    double lth_opt_M{20}; // optimal lambda_th
-    double lth_opt_N{13};
+    double lth_opt_M{17.5}; // optimal lambda_th
+    double lth_opt_N{11.25};
 
     std::string ofname_dm   {"output/rcss_bin"+std::to_string(Mbin)+"_dm_THR"+std::to_string(THR)+".txt"};
     std::string ofname_hl_n {"output/rcss_bin"+std::to_string(Mbin)+"_hl_num_THR"+std::to_string(THR)+".txt"};
@@ -25,7 +25,7 @@ int main(){
     auto hl_m = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
     // ------environment sticker---------
     force_resoluton_J(10);
-    force_base_type(1,4);
+    force_base_type(0,1);
     force_kernel_type(2);
     
     auto sc = sfc_r2c(sfc(dm),true);

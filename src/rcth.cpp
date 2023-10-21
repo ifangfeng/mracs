@@ -8,15 +8,15 @@ int main(){
 
     std::vector<Particle> hl_n; for(auto x : hl) hl_n.push_back({x.x,x.y,x.z,1.});
 
-    std::ofstream ofs {"output/rcth-THR30.txt"};
+    std::ofstream ofs {"output/rcth-THR15-BS.txt"};
     std::string para{"JE="};
 
     double GSR {1}; // Gaussian smoothing radius
-    double THR{30}; // Top-hat smoothing radius
+    double THR{15}; // Top-hat smoothing radius
 
     // ------environment sticker---------
     force_resoluton_J(10);
-    force_base_type(1,4);
+    force_base_type(0,1);
     force_kernel_type(2);
     para+= std::to_string(Resolution);
 
@@ -66,7 +66,7 @@ int main(){
         for(auto x : vpts) if(x->size()) std::vector<Particle>().swap(*x);
     }
     // --- cc_M ---
-    const int num_Mbin{7};
+    const int num_Mbin{3};
     for(int i = 0; i < num_Mbin; ++i){
         int Mbin = 1UL<<i; std::cout << "Mbin = " << Mbin << "\n";
         auto vpts = halo_mass_split(hl,Mbin);
