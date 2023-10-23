@@ -22,10 +22,10 @@ int main(){
     read_parameter();
 
     const int Mbin{4};
-    double THR{15};
+    double THR{30};
     double GSR{1}; // Gaussian smoothing radius
-    double lth_opt_ME{20}; // optimal lambda_th
-    double lth_opt_NE{13};
+    double lth_opt_ME{17.5}; // optimal lambda_th
+    double lth_opt_NE{11.25};
 
     std::ofstream ofs_ran {"output/rcnc_ran_split_THRR" + std::to_string(THR) + ".txt"};
     std::ofstream ofs_hl_m {"output/rcnc_m_split_THRR" + std::to_string(THR) + ".txt"};
@@ -45,7 +45,7 @@ int main(){
     // ------environment sticker---------
     force_resoluton_J(10);
     force_kernel_type(2);
-    force_base_type(1,4);
+    force_base_type(0,1);
 
     auto sc = sfc_r2c(sfc(dm),true);
     auto w_gs = wft(GSR, 0);

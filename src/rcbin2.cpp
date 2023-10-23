@@ -4,20 +4,20 @@
 int main(){
     read_parameter();
     
-    auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
+    auto dm = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub05.bin");
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
     // ------environment sticker---------
     force_resoluton_J(10);
-    force_base_type(1,7);
+    force_base_type(0,1);
     force_kernel_type(2);
-    double GSR {2.1};   // Gaussian smoothing radius
+    double GSR {1};   // Gaussian smoothing radius
 
     auto sc = sfc_r2c(sfc(dm),true);
     auto w = wft(GSR, 0);
     auto cxx = tidal_tensor(sc, w);
     
-    double l_th{7.5};   // lambda_{th}^{max}=7.5 for Mbin = 2
+    double l_th{12.5};   // lambda_{th}^{max}=12.5 for Mbin = 2
     auto envi =  web_classify(cxx,hl,l_th);
 
     delete[] w;

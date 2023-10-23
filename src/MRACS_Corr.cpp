@@ -173,7 +173,9 @@ double* densityPowerFFT(fftw_complex* sc)
         for(size_t j = 0; j < GridLen; ++j)
             for(size_t k = 0; k < GridLen/2+1; ++k)
             {
-                int kM = sqrt(i * i + j * j + k * k);
+                int ii = i < GridLen/2 ? i : GridLen - i;
+                int jj = j < GridLen/2 ? j : GridLen - j;
+                int kM = sqrt(ii * ii + jj * jj + k * k);
                 if(kM < klen){
                 Pk[kM] += Pk_array[i * GridLen * (GridLen/2+1) + j * (GridLen/2+1) + k];
                 nk[kM] += 1;}
@@ -218,7 +220,9 @@ double* densityPowerDWT(fftw_complex* sc)
         for(size_t j = 0; j < GridLen; ++j)
             for(size_t k = 0; k < GridLen/2+1; ++k)
             {
-                int kM = sqrt(i * i + j * j + k * k);
+                int ii = i < GridLen/2 ? i : GridLen - i;
+                int jj = j < GridLen/2 ? j : GridLen - j;
+                int kM = sqrt(ii * ii + jj * jj + k * k);
                 if(kM < klen)
                 {
                 Pk[kM] += Pk_array[i * GridLen * (GridLen/2+1) + j * (GridLen/2+1) + k];
