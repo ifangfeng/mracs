@@ -22,11 +22,12 @@ int main(){
     read_parameter();
 
     const int Mbin{4};
-    double THR{30};
+    double THR{15};
     double GSR{1}; // Gaussian smoothing radius
     double lth_opt_ME{17.5}; // optimal lambda_th
     double lth_opt_NE{11.25};
 
+    std::ofstream ofs{"output/rcnc_b_opt_THR" + std::to_string(THR) + ".txt"};
     std::ofstream ofs_ran {"output/rcnc_ran_split_THRR" + std::to_string(THR) + ".txt"};
     std::ofstream ofs_hl_m {"output/rcnc_m_split_THRR" + std::to_string(THR) + ".txt"};
     std::ofstream ofs_hl_n {"output/rcnc_n_split_THRR" + std::to_string(THR) + ".txt"};
@@ -35,7 +36,7 @@ int main(){
 
     std::vector<std::ofstream*> vec_ofs {&ofs_hl_n, &ofs_hl_m, &ofs_rc_NE, &ofs_rc_ME, &ofs_ran};
 
-    auto dm   = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
+    auto dm   = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub05.bin");
     auto hl   = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
     auto hl_n = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     auto ran  = default_random_particle(SimBoxL,hl.size());
@@ -44,8 +45,8 @@ int main(){
 
     // ------environment sticker---------
     force_resoluton_J(10);
-    force_kernel_type(2);
     force_base_type(0,1);
+    force_kernel_type(2);
 
     auto sc = sfc_r2c(sfc(dm),true);
     auto w_gs = wft(GSR, 0);
@@ -63,8 +64,8 @@ int main(){
 
     // ----reconstruct-------
     force_resoluton_J(9);
-    force_kernel_type(1);
     force_base_type(1,4);
+    force_kernel_type(1);
 
     auto sc_dm   = sfc_r2c(sfc(dm),true);
 
@@ -92,6 +93,7 @@ int main(){
             *vec_ofs[n] << vec_pk[n][k] << " ";
         *vec_ofs[n] << std::endl;
     }
+    for(auto x : vec_a_opt) ofs << 1./x << ", "; ofs << std::endl;
     for(auto x : vec_a_opt) std::cout << 1./x << ", "; std::cout << std::endl;
 
 }
