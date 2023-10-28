@@ -5,12 +5,12 @@
 fftw_complex* sc_delta(fftw_complex* sc_dm, fftw_complex* sc_hl, double amplitude, bool DELETE_SC_hl)
 {
     auto sc = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
-    sc[0][0] = sc_dm[0][0];
-    sc[0][1] = sc_dm[0][1];
+    sc[0][0] = 1;
+    sc[0][1] = 0;
     #pragma omp parallel for
     for(size_t i = 1; i < GridLen * GridLen * (GridLen/2 + 1); ++i){
-        sc[i][0] = sc_dm[i][0] - amplitude * sc_hl[i][0];
-        sc[i][1] = sc_dm[i][1] - amplitude * sc_hl[i][1];
+        sc[i][0] = sc_dm[i][0]/sc_dm[0][0] - amplitude * sc_hl[i][0]/sc_hl[0][0];
+        sc[i][1] = sc_dm[i][1]/sc_dm[0][0] - amplitude * sc_hl[i][1]/sc_hl[0][0];
     }
 
     if(DELETE_SC_hl) fftw_free(sc_hl);
@@ -22,7 +22,7 @@ int main(){
     read_parameter();
 
     const int Mbin{4};
-    double THR{15};
+    double THR{30};
     double GSR{1}; // Gaussian smoothing radius
     double lth_opt_ME{17.5}; // optimal lambda_th
     double lth_opt_NE{11.25};
@@ -82,7 +82,7 @@ int main(){
     for(auto x : vec_sc){
         double a_opt = covar_CombinewithKernel(densityCovarianceArray(x,sc_dm),wpk,true) / 
                         covar_CombinewithKernel(densityVarianceArray(x),wpk,true);
-        vec_pk.push_back(densityPowerFFT(sc_delta(sc_dm,x,sc_dm[0][0]/x[0][0] * a_opt, false)));
+        vec_pk.push_back(densityPowerFFT(sc_delta(sc_dm,x, a_opt, false)));
 
         vec_a_opt.push_back(a_opt);
     }
@@ -97,8 +97,6 @@ int main(){
     for(auto x : vec_a_opt) std::cout << 1./x << ", "; std::cout << std::endl;
 
 }
-
-
 
 
 
