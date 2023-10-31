@@ -581,38 +581,18 @@ std::vector<std::vector<Particle>*> halo_envi_match_and_split(std::vector<int>& 
     return result;
 }
 
-// ************************************************************************************************************
-// return the fourier of scaling function coefficients of optimal reconstructed halo catalogues, vpts is the
-// vector of dm and splited halo cataloges, in envi-split case: {dm,vd,st,fl,kt}. R specify the smmothing scale
-// which decide the reconstruct coeefficient of each halo component (weight vector), after solving weight
-// vector we then reconstruct the halo fields with optimal weight and return as fourier of sfc coefficients
-// ************************************************************************************************************
-fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT)
+fftw_complex* reconstruct_with_solve(std::vector<fftw_complex*>& vec_sc, std::vector<double> solve)
 {
-    auto wpk = window_Pk(R,0);
-
-    trimming_vpts(vpts);
-
-    // -------covariance array-------
-    std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sc_dm); for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
-
-    // ------solving optimal weight vector------
-    auto solve =  optimal_weight_solver(vec_sc,wpk,PRINT);
-
-    // -----------------reconstruct--------------
+    // ----norm----
     std::vector<double> weight, norm;
     for(int i = 1; i < solve.size(); ++i) weight.push_back(solve[i]);
-    for(auto x : vpts){
-        double sum = 0;
-        //#pragma omp parallel reduction (+:sum)
-        for(auto pt : *x) sum += pt.weight;
-        norm.push_back(sum);
-    }
-
+    for(int i = 1; i < solve.size(); ++i) norm.push_back(vec_sc[i][0][0]); // sum of pt.weight
+    
     double total{0};
     for(auto x : norm) total += x;
     for(int i = 0; i < weight.size(); ++i) weight[i] /= norm[i] / total;
 
+    // -----reconstruct and clean------
     #pragma omp parallel for
     for(size_t l = 0; l < GridLen * GridLen * (GridLen/2 + 1); ++l) {
             vec_sc[1][l][0] *= weight[0];
@@ -656,19 +636,29 @@ void trimming_vpts(std::vector<std::vector<Particle>*>& vpts)
         std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
     }
 }
-
-// vector of {sqrt(lambda),eigen_vector}
-std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT)
+// ************************************************************************************************************
+// return the fourier of scaling function coefficients of optimal reconstructed halo catalogues, vpts is the
+// vector of dm and splited halo cataloges, in envi-split case: {dm,vd,st,fl,kt}. R specify the smmothing scale
+// which decide the reconstruct coeefficient of each halo component (weight vector), after solving weight
+// vector we then reconstruct the halo fields with optimal weight and return as fourier of sfc coefficients
+// ************************************************************************************************************
+fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT)
 {
     auto wpk = window_Pk(R,0);
-    auto sc_dm = sfc_r2c(sfc(dm),true);
-    auto solve = optimal_solution_lean(sc_dm,vpts,wpk,PRINT);
 
-    delete[] wpk;
-    fftw_free(sc_dm);
+    // -----trimming before proceed----
+    trimming_vpts(vpts);
 
-    return solve;
+    // -------covariance array-------
+    std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sc_dm); for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
+
+    // ------solving optimal weight vector------
+    auto solve =  optimal_weight_solver(vec_sc,wpk,PRINT);
+
+    // --------reconstruct------------
+    return reconstruct_with_solve(vec_sc,solve);
 }
+
 
 // wpk is return by window_pk()
 std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::vector<Particle>*>& vpts, double* wpk, bool PRINT)
@@ -686,3 +676,15 @@ std::vector<double> optimal_solution_lean(fftw_complex* sc_dm, std::vector<std::
     return solve;
 }
 
+// vector of {sqrt(lambda),eigen_vector}
+std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT)
+{
+    auto wpk = window_Pk(R,0);
+    auto sc_dm = sfc_r2c(sfc(dm),true);
+    auto solve = optimal_solution_lean(sc_dm,vpts,wpk,PRINT);
+
+    delete[] wpk;
+    fftw_free(sc_dm);
+
+    return solve;
+}
