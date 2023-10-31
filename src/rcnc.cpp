@@ -67,18 +67,79 @@ int main(){
     force_base_type(1,4);
     force_kernel_type(1);
 
-    auto sc_dm   = sfc_r2c(sfc(dm),true);
+    auto wpk = window_Pk(THR,0);
+    auto sc_dm = sfc_r2c(sfc(dm),true);
 
+    trimming_vpts(vpts_NE);
+    trimming_vpts(vpts_ME);
+    
+    std::vector<fftw_complex*> vec_sc_NE, vec_sc_ME;
+    vec_sc_NE.push_back(sc_dm); for(auto x : vpts_NE) vec_sc_NE.push_back(sfc_r2c(sfc(*x),true));
+    vec_sc_ME.push_back(sc_dm); for(auto x : vpts_ME) vec_sc_ME.push_back(sfc_r2c(sfc(*x),true));
+
+    auto solve_NE = optimal_weight_solver(vec_sc_NE,wpk,true);
+    auto solve_ME = optimal_weight_solver(vec_sc_ME,wpk,true);
+
+    reconstruct_with_solve(vpts_NE,solve_NE);
+    reconstruct_with_solve(vpts_ME,solve_ME);
+
+    double sum_M1{0}, sum_M2{0};
+    double sum_NE1{0}, sum_ME1{0};
+    double sum_NE2{0}, sum_ME2{0};
+    std::vector<double> vec_expect_noise;
+    vec_expect_noise.push_back(pow(SimBoxL,3)/hl.size());
+
+    for(auto x : hl) sum_M1 += x.weight;
+    for(auto x : hl) sum_M2 += pow(x.weight,2);
+    for(auto x : vpts_NE) for(auto y : *x) sum_NE1 += y.weight;
+    for(auto x : vpts_ME) for(auto y : *x) sum_ME1 += y.weight;
+    for(auto x : vpts_NE) for(auto y : *x) sum_NE2 += pow(y.weight,2);
+    for(auto x : vpts_ME) for(auto y : *x) sum_ME2 += pow(y.weight,2);
+    vec_expect_noise.push_back(pow(SimBoxL,3)*sum_M2/pow(sum_M1,2));
+    vec_expect_noise.push_back(pow(SimBoxL,3)*sum_NE2/pow(sum_NE1,2));
+    vec_expect_noise.push_back(pow(SimBoxL,3)*sum_ME2/pow(sum_ME1,2));
+
+    size_t npts_NE{0}, npts_ME{0};
+    for(auto x : vpts_NE) npts_NE += x->size();
+    for(auto x : vpts_ME) npts_ME += x->size();
+
+    auto ran_NE = default_random_particle(SimBoxL,npts_NE);
+    auto ran_ME = default_random_particle(SimBoxL,npts_ME);
+
+    // weight of vpts_NE to ran_NE
+    size_t n{0};
+    for(size_t i = 0; i < vpts_NE.size(); ++i){
+        for(size_t j = 0; j < vpts_NE[i]->size(); ++j){
+            ran_NE[n].weight = (*vpts_NE[i])[j].weight;
+            ++n;
+        }
+    }
+    // weight of vpts_ME to ran_ME
+    n = 0;
+    for(size_t i = 0; i < vpts_ME.size(); ++i){
+        for(size_t j = 0; j < vpts_ME[i]->size(); ++j){
+            ran_ME[n].weight = (*vpts_ME[i])[j].weight;
+            ++n;
+        }
+    }
+
+    auto sc_ran_NE = sfc_r2c(sfc(ran_NE),true);
+    auto sc_ran_ME = sfc_r2c(sfc(ran_ME),true);
+
+    auto pk_ran_NE = densityPowerFFT(sc_ran_NE);
+    auto pk_ran_ME = densityPowerFFT(sc_ran_ME);
+
+    
+    // ----power spectrum--------
     std::vector<fftw_complex*> vec_sc;
     vec_sc.push_back(sfc_r2c(sfc(hl_n),true));
     vec_sc.push_back(sfc_r2c(sfc(hl),true));
-    vec_sc.push_back(optimal_reconstruct(sc_dm,vpts_NE,THR,true));
-    vec_sc.push_back(optimal_reconstruct(sc_dm,vpts_ME,THR,true));
+    vec_sc.push_back(reconstruct_with_solve(vec_sc_NE,solve_NE));
+    vec_sc.push_back(reconstruct_with_solve(vec_sc_ME,solve_ME));
 
-    std::vector<double> vec_a_opt, vec_noise;
+    std::vector<double> vec_a_opt;
     std::vector<double*> vec_pk;
 
-    auto wpk = window_Pk(THR,0);
     for(auto x : vec_sc){
         double a_opt = covar_CombinewithKernel(densityCovarianceArray(x,sc_dm),wpk,true) / 
                         covar_CombinewithKernel(densityVarianceArray(x),wpk,true);
@@ -93,9 +154,14 @@ int main(){
             *vec_ofs[n] << vec_pk[n][k] << " ";
         *vec_ofs[n] << std::endl;
     }
+    //--------------------------------
+
     ofs << "b_opt: "; for(auto x : vec_a_opt) ofs << 1./x << ", "; ofs << std::endl;
-    ofs << "Noise: "; 
+    ofs << "Noise: "; for(auto x : vec_expect_noise) ofs << x << ", "; ofs << std::endl;
+    for(int i = 0; i < GridLen/2 + 1; ++i) std::cout << pk_ran_NE[i] << ", "; std::cout << std::endl;
+    for(int i = 0; i < GridLen/2 + 1; ++i) std::cout << pk_ran_ME[i] << ", "; std::cout << std::endl;
     for(auto x : vec_a_opt) std::cout << 1./x << ", "; std::cout << std::endl;
+    for(auto x :vec_expect_noise) std::cout << x << ", "; std::cout << std::endl;
 
 }
 

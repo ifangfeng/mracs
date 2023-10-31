@@ -611,6 +611,31 @@ fftw_complex* reconstruct_with_solve(std::vector<fftw_complex*>& vec_sc, std::ve
     return vec_sc[1];
 }
 
+void reconstruct_with_solve(std::vector<std::vector<Particle>*>& vpts, std::vector<double> solve)
+{
+    // ----norm----
+    std::vector<double> weight, norm;
+    for(int i = 1; i < solve.size(); ++i) weight.push_back(solve[i]);
+    
+    for(auto pt : vpts) {
+        double sum{0};
+        #pragma omp parallel for reduction(+:sum)
+        for(auto x : *pt) sum += x.weight;
+        norm.push_back(sum);
+    }
+    
+    double total{0};
+    for(auto x : norm) total += x;
+    for(int i = 0; i < weight.size(); ++i) weight[i] /= norm[i] / total;
+
+    for(auto n = 0; auto pt : vpts) {
+        #pragma omp parallel for
+        for(size_t i = 0; i < pt->size(); ++i) (*pt)[i].weight *= weight[n];
+        ++n;
+    }
+}
+
+
 void trimming_vpts(std::vector<std::vector<Particle>*>& vpts)
 {
     // -------size check before eigen solver-----
@@ -644,10 +669,9 @@ void trimming_vpts(std::vector<std::vector<Particle>*>& vpts)
 // ************************************************************************************************************
 fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT)
 {
-    auto wpk = window_Pk(R,0);
-
-    // -----trimming before proceed----
     trimming_vpts(vpts);
+
+    auto wpk = window_Pk(R,0);
 
     // -------covariance array-------
     std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sc_dm); for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));

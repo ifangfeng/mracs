@@ -35,6 +35,8 @@ std::vector<int> environment(std::vector<Particle>& dm, double Rs, std::vector<P
 double gaussian_radius_from_mass(double m_smooth);
 fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
 void trimming_vpts(std::vector<std::vector<Particle>*>& vpts);
+fftw_complex* reconstruct_with_solve(std::vector<fftw_complex*>& vec_sc, std::vector<double> solve);
+void reconstruct_with_solve(std::vector<std::vector<Particle>*>& vpts, std::vector<double> solve);
 std::vector<double> optimal_weight_solver(std::vector<fftw_complex*>& vec_sc, double* wpk, bool PRINT);
 fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT);
 std::vector<double> optimal_solution(std::vector<Particle>& dm, std::vector<std::vector<Particle>*>& vpts, double R, bool PRINT);
