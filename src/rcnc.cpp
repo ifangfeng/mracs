@@ -75,7 +75,7 @@ int main(){
     vec_sc.push_back(optimal_reconstruct(sc_dm,vpts_NE,THR,true));
     vec_sc.push_back(optimal_reconstruct(sc_dm,vpts_ME,THR,true));
 
-    std::vector<double> vec_a_opt;
+    std::vector<double> vec_a_opt, vec_noise;
     std::vector<double*> vec_pk;
 
     auto wpk = window_Pk(THR,0);
@@ -93,7 +93,8 @@ int main(){
             *vec_ofs[n] << vec_pk[n][k] << " ";
         *vec_ofs[n] << std::endl;
     }
-    for(auto x : vec_a_opt) ofs << 1./x << ", "; ofs << std::endl;
+    ofs << "b_opt: "; for(auto x : vec_a_opt) ofs << 1./x << ", "; ofs << std::endl;
+    ofs << "Noise: "; 
     for(auto x : vec_a_opt) std::cout << 1./x << ", "; std::cout << std::endl;
 
 }
