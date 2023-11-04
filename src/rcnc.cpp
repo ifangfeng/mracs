@@ -2,15 +2,15 @@
 #include"mracs.h"
 
 // w is smoothing kernel in fourier space
-fftw_complex* sc_delta(fftw_complex* sc_dm, fftw_complex* sc_hl, double amplitude, bool DELETE_SC_hl)
+fftw_complex* sc_delta(fftw_complex* sc_dm, fftw_complex* sc_hl, double bias, bool DELETE_SC_hl)
 {
     auto sc = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
     sc[0][0] = 1;
     sc[0][1] = 0;
     #pragma omp parallel for
     for(size_t i = 1; i < GridLen * GridLen * (GridLen/2 + 1); ++i){
-        sc[i][0] = sc_dm[i][0]/sc_dm[0][0] - amplitude * sc_hl[i][0]/sc_hl[0][0];
-        sc[i][1] = sc_dm[i][1]/sc_dm[0][0] - amplitude * sc_hl[i][1]/sc_hl[0][0];
+        sc[i][0] = bias * sc_dm[i][0]/sc_dm[0][0] - sc_hl[i][0]/sc_hl[0][0];
+        sc[i][1] = bias * sc_dm[i][1]/sc_dm[0][0] - sc_hl[i][1]/sc_hl[0][0];
     }
 
     if(DELETE_SC_hl) fftw_free(sc_hl);
@@ -27,14 +27,16 @@ int main(){
     double lth_opt_ME{17.5}; // optimal lambda_th
     double lth_opt_NE{11.25};
 
-    std::ofstream ofs{"output/rcnc_b_opt_THR" + std::to_string(THR) + ".txt"};
-    std::ofstream ofs_ran {"output/rcnc_ran_split_THRR" + std::to_string(THR) + ".txt"};
-    std::ofstream ofs_hl_m {"output/rcnc_m_split_THRR" + std::to_string(THR) + ".txt"};
+    std::ofstream ofs{"output/rcnc_bias_THR" + std::to_string(THR) + ".txt"};
+    
     std::ofstream ofs_hl_n {"output/rcnc_n_split_THRR" + std::to_string(THR) + ".txt"};
+    std::ofstream ofs_hl_m {"output/rcnc_m_split_THRR" + std::to_string(THR) + ".txt"};
     std::ofstream ofs_rc_NE{"output/rcnc_NE_split_THRR" + std::to_string(THR) + ".txt"};
     std::ofstream ofs_rc_ME{"output/rcnc_ME_split_THRR" + std::to_string(THR) + ".txt"};
+    std::ofstream ofs_ran {"output/rcnc_ran_split_THRR" + std::to_string(THR) + ".txt"};
+    std::ofstream ofs_pk_dm{"output/rcnc_pk_dm_split_THRR" + std::to_string(THR) + ".txt"};
 
-    std::vector<std::ofstream*> vec_ofs {&ofs_hl_n, &ofs_hl_m, &ofs_rc_NE, &ofs_rc_ME, &ofs_ran};
+    std::vector<std::ofstream*> vec_ofs {&ofs_hl_n, &ofs_hl_m, &ofs_rc_NE, &ofs_rc_ME, &ofs_ran, &ofs_pk_dm};
 
     auto dm   = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub05.bin");
     auto hl   = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
@@ -137,17 +139,19 @@ int main(){
     vec_sc.push_back(reconstruct_with_solve(vec_sc_NE,solve_NE));
     vec_sc.push_back(reconstruct_with_solve(vec_sc_ME,solve_ME));
 
-    std::vector<double> vec_a_opt;
+    std::vector<double> vec_bias;
     std::vector<double*> vec_pk;
 
+    double p_m = covar_CombinewithKernel(densityVarianceArray(sc_dm),wpk,true);
     for(auto x : vec_sc){
-        double a_opt = covar_CombinewithKernel(densityCovarianceArray(x,sc_dm),wpk,true) / 
-                        covar_CombinewithKernel(densityVarianceArray(x),wpk,true);
-        vec_pk.push_back(densityPowerFFT(sc_delta(sc_dm,x, a_opt, false)));
+        double bias = covar_CombinewithKernel(densityCovarianceArray(x,sc_dm),wpk,true) / p_m;
+                        
+        vec_pk.push_back(densityPowerFFT(sc_delta(sc_dm, x, bias, false)));
 
-        vec_a_opt.push_back(a_opt);
+        vec_bias.push_back(bias);
     }
     vec_pk.push_back(densityPowerFFT(sfc_r2c(sfc(ran),true)));
+    vec_pk.push_back(densityPowerFFT(sc_dm));
 
     for(int n = 0; n < vec_pk.size(); ++n){
         for(int k = 0; k < GridLen/2 +1; ++k)
@@ -156,11 +160,11 @@ int main(){
     }
     //--------------------------------
 
-    ofs << "b_opt: "; for(auto x : vec_a_opt) ofs << 1./x << ", "; ofs << std::endl;
+    ofs << "bias: "; for(auto x : vec_bias) ofs << x << ", "; ofs << std::endl;
     ofs << "Noise: "; for(auto x : vec_expect_noise) ofs << x << ", "; ofs << std::endl;
     for(int i = 0; i < GridLen/2 + 1; ++i) std::cout << pk_ran_NE[i] << ", "; std::cout << std::endl;
     for(int i = 0; i < GridLen/2 + 1; ++i) std::cout << pk_ran_ME[i] << ", "; std::cout << std::endl;
-    for(auto x : vec_a_opt) std::cout << 1./x << ", "; std::cout << std::endl;
+    for(auto x : vec_bias) std::cout << x << ", "; std::cout << std::endl;
     for(auto x :vec_expect_noise) std::cout << x << ", "; std::cout << std::endl;
 
 }
