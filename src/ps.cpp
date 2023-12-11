@@ -6,7 +6,7 @@ void density_power(int a, int n, std::vector<Particle> p);
 int main()
 {
     read_parameter();
-    auto p = read_in_Halo_3vector(DataDirec);
+    auto p = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub5e-4.bin");
 
     density_power(0,1,p);
     density_power(0,5,p);
