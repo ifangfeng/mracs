@@ -757,6 +757,20 @@ double* convol_c2r(fftw_complex* sc, double* w)
     return c;
 }
 
+fftw_complex* convol_c2c(fftw_complex* sc, double* w)
+{
+    auto sc1 = fftw_alloc_complex(GridLen * GridLen * (GridLen/2 + 1));
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < GridLen * GridLen * (GridLen/2 + 1); ++i)
+    {
+        sc1[i][0] = w[i] * sc[i][0];
+        sc1[i][1] = w[i] * sc[i][1]; 
+    }
+    
+    return sc1;
+}
+
 //=======================================================================================
 // s and w are 3d Real array, s in physical space while w in frequency space, return 
 // as double* c , convol==fftback(inner_product(fft(s), w)), Matrix3D==L*L*L , L==2^J

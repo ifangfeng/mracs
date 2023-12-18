@@ -23,14 +23,23 @@ void trimming(std::vector<std::vector<double>*>& vpts){
         std::cout << vpts.size() << "\n";for(auto x : vpts) std::cout << x->size() << ", "; std::cout << "\n";
     }
 }
+std::vector<double> haha(int n){
+    std::vector<double> mm;
+    for(int i = 0; i < n; ++i){
+        mm.push_back(i);
+    }
+    return mm;
+}
 int main(){
-    std::vector<std::vector<double>*> vpts;
-    for(int i = 0; i < 4; ++i) vpts.push_back(new std::vector<double>);
-    vpts[0]->push_back({1});
-    vpts[2]->push_back({2});
-    vpts[3]->push_back({3});
-
-    trimming(vpts);
-    std::cout <<"after trimming: "<< vpts.size() << ":\n";
-    for(auto x : vpts) std::cout << x->size() << ", ";std::cout << std::endl;
+    //std::vector<std::vector<double>*> vpts;
+    //for(int i = 0; i < 4; ++i) vpts.push_back(new std::vector<double>);
+    //vpts[0]->push_back({1});
+    //vpts[2]->push_back({2});
+    //vpts[3]->push_back({3});
+//
+    //trimming(vpts);
+    //std::cout <<"after trimming: "<< vpts.size() << ":\n";
+    //for(auto x : vpts) std::cout << x->size() << ", ";std::cout << std::endl;
+    auto vec = haha(5);
+    for(auto x : vec) std::cout << x << ", "; std::cout << std::endl;
 }

@@ -117,6 +117,7 @@ double* wfc(const double Radius, const double theta);
 double* convol3d(double* s, double* w, bool DELETE_S);
 double* convol_c2r(fftw_complex* sc, double* w);
 double* sc_back(fftw_complex* sc, bool DELETE_SC);
+fftw_complex* convol_c2c(fftw_complex* sc, double* w);
 fftw_complex* sfc_r2c(double* s, bool DELETE_S);
 fftw_complex* hermitian_product(fftw_complex* sc1, fftw_complex* sc2);
 double array_sum(double* w, size_t N);

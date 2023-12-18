@@ -202,11 +202,12 @@ double* densityPowerDWT(fftw_complex* sc)
     const double npart = sc[0][0];
     double* Pk_array = new double[(GridLen/2 + 1) * GridLen * GridLen];
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for(size_t i = 0; i < GridLen; ++i)
         for(size_t j = 0; j < GridLen; ++j)
             for(size_t k = 0; k < GridLen/2 + 1; ++k){
-                Pk_array[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k] = PowerPhi[i * (GridLen + 1) * (GridLen + 1) + j * (GridLen + 1) + k] *
+                Pk_array[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k] = 
+                PowerPhi[(i < GridLen/2 ? i : GridLen - i) * (GridLen + 1) * (GridLen + 1) + (j < GridLen/2 ? j : GridLen - j) * (GridLen + 1) + k] *
                 (pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][0], 2) + pow(sc[i * GridLen * (GridLen/2 + 1) + j * (GridLen/2 + 1) + k][1], 2));
             }
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

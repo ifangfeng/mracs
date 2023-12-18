@@ -44,3 +44,23 @@ double WindowFunction_Cylinder(double R, double h, double ki, double kj, double 
     double k_r = sqrt(ki * ki + kj * kj);
     return (sin(TWOPI*kk*h/2)/(M_PI*kk*h/2)*std::cyl_bessel_j(1,TWOPI*k_r*R)/(TWOPI*k_r*R));
 }
+
+// NFW halo fitting window()
+double NFW_window(double r_h, double r_s, double ki, double kj, double kk)
+{
+    double k = sqrt(ki * ki + kj * kj + kk * kk);
+    if(k==0) return 1.;
+    
+    double c = r_h / r_s;
+    double A = 1. / (log(1+c) - c/(1+c));
+
+    double delta = 0.001;
+    int L = c / delta;
+
+    double sum{0};
+    for(int i = 0; i < L; ++i){
+        sum += sin(TWOPI*k*r_s*i*delta)/(TWOPI*k*r_s*i*delta)/(i*delta*pow((1+i*delta),2));
+    }
+
+    return A*delta*sum;
+}
