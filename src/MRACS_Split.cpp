@@ -671,7 +671,10 @@ fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<P
 {
     trimming_vpts(vpts);
 
+    if(!R)
     auto wpk = window_Pk(R,0);
+    else 
+    auto wpk = new double[(GridLen+1)*(GridLen+1)*(GridLen+1)](1);
 
     // -------covariance array-------
     std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sc_dm); for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));

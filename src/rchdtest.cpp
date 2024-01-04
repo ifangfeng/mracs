@@ -55,19 +55,27 @@ double* wfc_tmp(const double Radius, const double theta)
 //=======================================================================================
 // window array (convolution kernel)
 //=======================================================================================
-double* windowArray_NFW(const double Radius, const double theta)
+double* windowArray_NFW(const double r_h, const double r_s)
 {
     const double DeltaXi = 1./GridLen;
-    const double RGrid {Radius * GridLen/SimBoxL};
 
     auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
+
+    const int refine {10};
+    const int arraysize = GridLen * refine * 1.8; // 1.8 is slitly larger than sqrt(3)
+
+    auto fk_nfw = new double[arraysize]; 
+    for(int i = 0; i < arraysize; ++i){
+        fk_nfw[i] = NFW_window(r_h*GridLen/SimBoxL,r_s*GridLen/SimBoxL, 0, 0, i * DeltaXi / refine);
+    }
 
     #pragma omp parallel for
     for(size_t i = 0; i <= GridLen; ++i)
         for(size_t j = 0; j <= GridLen; ++j)
-            for(size_t k = 0; k <= GridLen; ++k)
-                WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = NFW_window(RGrid,theta*GridLen/SimBoxL, i * DeltaXi, j * DeltaXi, k * DeltaXi);
-
+            for(size_t k = 0; k <= GridLen; ++k){
+                int index = pow(i*i + j*j + k*k, 0.5) * refine;
+                WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fk_nfw[index];
+            }
     return WindowArray;
 }
 

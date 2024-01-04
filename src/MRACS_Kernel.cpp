@@ -58,8 +58,8 @@ double NFW_window(double r_h, double r_s, double ki, double kj, double kk)
     int L = c / delta;
 
     double sum{0};
-    for(int i = 0; i < L; ++i){
-        sum += sin(TWOPI*k*r_s*i*delta)/(TWOPI*k*r_s*i*delta)/(i*delta*pow((1+i*delta),2));
+    for(int i = 1; i < L; ++i){
+        sum += sin(TWOPI*k*r_s*i*delta)/(TWOPI*k*r_s*i*delta)*(i*delta)/pow(1+i*delta,2);
     }
 
     return A*delta*sum;

@@ -10,7 +10,7 @@ int main(){
     double lth_opt_ME{17.5}; // optimal lambda_th
     double lth_opt_NE{11.25};
 
-    auto dm   = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub05.bin");
+    auto dm   = read_in_DM_3vector("/data0/MDPL2/dm_sub/dm_sub005.bin");
     auto hl   = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
     auto hl_n = read_in_Halo_3vector("/data0/MDPL2/halo_Mcut2e12.bin");
     
@@ -54,23 +54,25 @@ int main(){
     for(size_t i = 0; i < ck_n.size(); ++i) ofs_hl_m << ck_m[i] << " ";
     for(size_t i = 0; i < ck_n.size(); ++i) ofs_hl_n << ck_n[i] << " ";
 
-    for(auto r : vec_r){
 
-        std::ofstream ofs_rc_NE{"output/rcck_NE_split_THRR" + std::to_string(r) + ".txt"};
-        std::ofstream ofs_rc_ME{"output/rcck_ME_split_THRR" + std::to_string(r) + ".txt"};
+    std::ofstream ofs_rc_NE{"output/rcck_NE_split.txt"};
+    std::ofstream ofs_rc_ME{"output/rcck_ME_split.txt"};
 
-        auto sc_rc_NE = optimal_reconstruct(sc_dm,vpts_NE,r,true);
-        auto sc_rc_ME = optimal_reconstruct(sc_dm,vpts_ME,r,true);
+    std::ofstream ofs_rc_NEs{"output/rcck_NE_split_nfw.txt"};
+    std::ofstream ofs_rc_MEs{"output/rcck_ME_split_nfw.txt"};
 
-        auto ck_NE = fourier_mode_correlation_1rlz(sc_dm,sc_rc_NE);
-        auto ck_ME = fourier_mode_correlation_1rlz(sc_dm,sc_rc_ME);
+    auto sc_rc_NE = optimal_reconstruct(sc_dm,vpts_NE,r,true);
+    auto sc_rc_ME = optimal_reconstruct(sc_dm,vpts_ME,r,true);
 
-        for(size_t i = 0; i < ck_n.size(); ++i) ofs_rc_NE << ck_NE[i] << " ";
-        for(size_t i = 0; i < ck_n.size(); ++i) ofs_rc_ME << ck_ME[i] << " ";
+    auto ck_NE = fourier_mode_correlation_1rlz(sc_dm,sc_rc_NE);
+    auto ck_ME = fourier_mode_correlation_1rlz(sc_dm,sc_rc_ME);
 
-        fftw_free(sc_rc_NE);
-        fftw_free(sc_rc_ME);
-    }
+    for(size_t i = 0; i < ck_n.size(); ++i) ofs_rc_NE << ck_NE[i] << " ";
+    for(size_t i = 0; i < ck_n.size(); ++i) ofs_rc_ME << ck_ME[i] << " ";
+
+    fftw_free(sc_rc_NE);
+    fftw_free(sc_rc_ME);
+    
 
 }
 
