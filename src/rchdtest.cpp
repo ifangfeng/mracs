@@ -38,20 +38,6 @@ double m2r(double m)
     return pow(m,1./3)/49146.1;
 }
 
-double* wfc_tmp(const double Radius, const double theta)
-{
-    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
-
-    auto WindowArray = windowArray(Radius, theta);                          
-
-    auto w = symmetryFold_lean(WindowArray);
-
-    std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
-    std::cout << "Time difference 2 wfc3d    = " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count() << "[ms]" << std::endl;
-
-    return w;
-}
-
 //=======================================================================================
 // window array (convolution kernel)
 //=======================================================================================
@@ -66,7 +52,7 @@ double* windowArray_NFW(const double r_h, const double r_s)
 
     auto fk_nfw = new double[arraysize]; 
     for(int i = 0; i < arraysize; ++i){
-        fk_nfw[i] = NFW_window(r_h*GridLen/SimBoxL,r_s*GridLen/SimBoxL, 0, 0, i * DeltaXi / refine);
+        fk_nfw[i] = NFW_window(r_h*GridLen/SimBoxL,r_s*GridLen/SimBoxL,1, 0, 0, i * DeltaXi / refine);
     }
 
     #pragma omp parallel for

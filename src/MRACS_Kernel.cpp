@@ -45,8 +45,8 @@ double WindowFunction_Cylinder(double R, double h, double ki, double kj, double 
     return (sin(TWOPI*kk*h/2)/(M_PI*kk*h/2)*std::cyl_bessel_j(1,TWOPI*k_r*R)/(TWOPI*k_r*R));
 }
 
-// NFW halo fitting window()
-double NFW_window(double r_h, double r_s, double ki, double kj, double kk)
+// NFW halo fitting window(), extent == 1 is default, 3 or 10 is an option.
+double NFW_window(double r_h, double r_s, int extent, double ki, double kj, double kk)
 {
     double k = sqrt(ki * ki + kj * kj + kk * kk);
     if(k==0) return 1.;
@@ -55,7 +55,28 @@ double NFW_window(double r_h, double r_s, double ki, double kj, double kk)
     double A = 1. / (log(1+c) - c/(1+c));
 
     double delta = 0.001;
-    int L = c / delta;
+    int L = c*extent / delta;
+
+    double sum{0};
+    for(int i = 1; i < L; ++i){
+        sum += sin(TWOPI*k*r_s*i*delta)/(TWOPI*k*r_s*i*delta)*(i*delta)/pow(1+i*delta,2);
+    }
+
+    return A*delta*sum;
+}
+
+// normalize the kernel to 1 if the 'extent' parameter put into effect, not the default choice
+double NFW_window_norm(double r_h, double r_s, int extent, double ki, double kj, double kk)
+{
+    
+    double c = r_h / r_s;
+    double A = 1. / log(1+c*extent) - c*extent/(1+c*extent);
+
+    double k = sqrt(ki * ki + kj * kj + kk * kk);
+    if(k==0) return 1.;
+
+    double delta = 0.001;
+    int L = c*extent / delta;
 
     double sum{0};
     for(int i = 1; i < L; ++i){

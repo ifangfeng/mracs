@@ -671,10 +671,16 @@ fftw_complex* optimal_reconstruct(fftw_complex* sc_dm, std::vector<std::vector<P
 {
     trimming_vpts(vpts);
 
+    double* wpk = nullptr;
+
     if(!R)
-    auto wpk = window_Pk(R,0);
-    else 
-    auto wpk = new double[(GridLen+1)*(GridLen+1)*(GridLen+1)](1);
+        wpk = window_Pk(R,0);
+    else {
+        wpk = new double[(GridLen+1)*(GridLen+1)*(GridLen+1)];
+        #pragma omp parallel for
+        for(size_t i = 0; i < (GridLen+1)*(GridLen+1)*(GridLen+1); ++i) 
+            wpk[i] = 1;
+    }
 
     // -------covariance array-------
     std::vector<fftw_complex*> vec_sc; vec_sc.push_back(sc_dm); for(auto x : vpts) vec_sc.push_back(sfc_r2c(sfc(*x),true));
