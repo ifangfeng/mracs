@@ -11,6 +11,7 @@ int main() {
         vec_ofs.push_back(ofs);
     }
 
+    auto p0 = default_random_particle(SimBoxL,1000);
     for(auto ofs : vec_ofs){
         *ofs << "haha\n";
         delete ofs;

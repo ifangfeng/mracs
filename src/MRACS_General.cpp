@@ -28,11 +28,26 @@ std::vector<double> linear_scale_generator(double Rmin, double Rmax, int Npt, bo
 std::vector<Particle> default_random_particle(double boxsize, size_t n)
 {
     std::default_random_engine e;
-    std::uniform_real_distribution<double> v(0,SimBoxL);
+    std::uniform_real_distribution<double> v(0,boxsize);
 
     std::vector<Particle> p0;
     for(size_t i = 0; i < n; ++i) 
         p0.push_back({v(e), v(e), v(e), 1.});
+    
+    return p0;
+}
+
+// generate n random particle locate in box (Lx,Ly,Lz) 
+std::vector<Particle> default_random_particle(double Lx, double Ly, double Lz, size_t n)
+{
+    std::default_random_engine e;
+    std::uniform_real_distribution<double> vx(0,Lx);
+    std::uniform_real_distribution<double> vy(0,Ly);
+    std::uniform_real_distribution<double> vz(0,Lz);
+
+    std::vector<Particle> p0;
+    for(size_t i = 0; i < n; ++i) 
+        p0.push_back({vx(e), vy(e), vz(e), 1.});
     
     return p0;
 }
