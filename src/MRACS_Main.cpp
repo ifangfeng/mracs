@@ -121,7 +121,7 @@ void read_parameter()
     GridVol = 1UL << Resolution*3;
 
     RESOL = "L" + std::to_string(GridLen);
-    RADII = "R" + std::to_string(Radius);
+    RADII = "R" + std::to_string(int(Radius));
     GENUS = "DaubG" + std::to_string(phiGenus);
     
     if(BaseType == 0)
