@@ -114,9 +114,7 @@ double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Pa
     auto count = new double[p0.size()];
     double temp;
 
-    #ifdef IN_PARALLEL
     #pragma omp parallel for reduction(+:temp)
-    #endif
 
     for(size_t n = 0; n < p0.size(); ++n)
     {

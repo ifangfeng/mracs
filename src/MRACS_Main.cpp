@@ -438,6 +438,15 @@ double* windowArray(const double Radius, const double theta)
     }
     else if(KernelFunc == 3)
     {
+        const double R2Grid {theta * GridLen/SimBoxL};
+        #pragma omp parallel for
+        for(size_t i = 0; i <= GridLen; ++i)
+            for(size_t j = 0; j <= GridLen; ++j)
+                for(size_t k = 0; k <= GridLen; ++k)
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = WindowFunction_TShell(RGrid,R2Grid, i*DeltaXi, j*DeltaXi, k*DeltaXi);
+    }
+    else if(KernelFunc == 4)
+    {
         double fz[GridLen+1];
         double dXitwo{pow(DeltaXi,2)};
         for(size_t i = 0; i <= GridLen; ++i) fz[i] = cos(TWOPI * RGrid * cos(theta) * i*DeltaXi);
@@ -455,7 +464,7 @@ double* windowArray(const double Radius, const double theta)
                     WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
         delete[] fxy;
     }
-    else if(KernelFunc == 4)
+    else if(KernelFunc == 5)
     {
         double fz[GridLen+1];
         double dXitwo{pow(DeltaXi,2)};
@@ -547,9 +556,7 @@ double* PowerPhiFunc(const size_t N)
 
     auto a = new double[(N+1)*(N+1)*(N+1)];
 
-    #ifdef IN_PARALLEL
     #pragma omp parallel for
-    #endif
     for(size_t i = 0; i <= N; ++i)
         for(size_t j = 0; j <= N; ++j)
             for(size_t k = 0; k <= N; ++k)
@@ -572,7 +579,7 @@ void force_resoluton_J(int j)
     }
 }
 
-// 0-Shell; 1-Sphere; 2-Gaussian; 3-DualRing
+// 0-Shell; 1-Sphere; 2-Gaussian; 3-TShell; 4-DualRing; 5-Cylinder
 void force_kernel_type(int x)
 {
     if(x != KernelFunc)

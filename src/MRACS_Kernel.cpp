@@ -32,6 +32,17 @@ double WindowFunction_Gaussian(double R, double ki, double kj, double kk)
     return pow(1/M_E,Phase*Phase/2);
 }
 
+// thick shell(R1,R2) window function with R1 < R2:
+// 3/((2Pi*kR_2)^3-(2Pi*kR_1)^3)*[sin(x)-x*cos(x)]^(2Pi*kR_2)_(2Pi*kR_1)
+double WindowFunction_TShell(double R1, double R2, double ki, double kj, double kk)
+{
+    double k = sqrt(ki * ki + kj * kj + kk * kk);
+    if(k == 0) return 1.;
+    double Phase1 = TWOPI * k * R1;
+    double Phase2 = TWOPI * k * R2;
+    return 3*(sin(Phase2)-Phase2*cos(Phase2)-sin(Phase1)+Phase1*cos(Phase1))/(pow(Phase2,3)-pow(Phase1,3));
+}
+
 // dual-ring window function: J_0(2Pi*kRsin(a)sin(b))*cos(2Pi*kRcos(a)cos(b))
 double WindowFunction_Dual_Ring(double R, double theta, double ki, double kj, double kk)
 {
