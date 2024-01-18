@@ -7,7 +7,7 @@ int main()
     read_parameter();
     auto p = read_in_DM_3vector(DataDirec);
     auto s = sfc(p);
-    auto w = wft(Radius, 0);
+    auto w = wfc(Radius, 0);
     auto c = convol3d(s, w, false);
 
     std::default_random_engine e;

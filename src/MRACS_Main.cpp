@@ -425,38 +425,41 @@ double* windowArray(const double Radius, const double theta)
 
     if(KernelFunc <= 3)
     {
-        double (*WindowFunction)(double, double, double, double){nullptr};
-        if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
-        else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
-        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
+        //double (*WindowFunction)(double, double, double, double){nullptr};
+        //if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
+        //else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
+        //else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
     
         int FINE {10};
         int lsize = ceil(sqrt(3.)*(GridLen+1))*FINE;
         double* wFiner = new double[lsize];
 
-        if(KernelFunc == 0) {
+        if(KernelFunc == 0) { // shell
+            #pragma omp parallel for
             for(int i = 0; i < lsize; ++i){
                 double phase = TWOPI * RGrid * i*DeltaXi/FINE;
                 wFiner[i] = sin(phase)/(phase);
             }
             wFiner[0] = 1;
         }
-        else if(KernelFunc == 1) {
+        else if(KernelFunc == 1) { // sphere
+            #pragma omp parallel for
             for(int i = 0; i < lsize; ++i){
                 double phase = TWOPI * RGrid * i*DeltaXi/FINE;
                 wFiner[i] = 3*(sin(phase)-phase*cos(phase))/(pow(phase,3));
             }
             wFiner[0] = 1;
         }
-        else if(KernelFunc == 2) {
+        else if(KernelFunc == 2) { // Gaussian
+            #pragma omp parallel for
             for(int i = 0; i < lsize; ++i){
                 double phase = TWOPI * RGrid * i*DeltaXi/FINE;
                 wFiner[i] = pow(1/M_E,phase*phase/2);
             }
         }
-        else if(KernelFunc == 3) {
+        else if(KernelFunc == 3) { // thick shell
             const double R2Grid {theta * GridLen/SimBoxL};
-
+            #pragma omp parallel for
             for(int i = 0; i < lsize; ++i){
                 double phase1 = TWOPI * RGrid * i*DeltaXi/FINE;
                 double phase2 = TWOPI * R2Grid * i*DeltaXi/FINE;
@@ -468,19 +471,13 @@ double* windowArray(const double Radius, const double theta)
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
                 for(size_t k = 0; k <= GridLen; ++k)
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = wFiner[sqrt()]
-                    WindowFunction(RGrid, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+                {
+                    int index = sqrt(i*i + j*j + k*k)*FINE;
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = wFiner[index];
+                }
+        delete[] wFiner;
     }
-    else if(KernelFunc == 3)
-    {
-        const double R2Grid {theta * GridLen/SimBoxL};
-        #pragma omp parallel for
-        for(size_t i = 0; i <= GridLen; ++i)
-            for(size_t j = 0; j <= GridLen; ++j)
-                for(size_t k = 0; k <= GridLen; ++k)
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = WindowFunction_TShell(RGrid,R2Grid, i*DeltaXi, j*DeltaXi, k*DeltaXi);
-    }
-    else if(KernelFunc == 4)
+    else if(KernelFunc == 4) // dual-ring
     {
         double fz[GridLen+1];
         double dXitwo{pow(DeltaXi,2)};
@@ -499,7 +496,7 @@ double* windowArray(const double Radius, const double theta)
                     WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
         delete[] fxy;
     }
-    else if(KernelFunc == 5)
+    else if(KernelFunc == 5) // cylinder
     {
         double fz[GridLen+1];
         double dXitwo{pow(DeltaXi,2)};
