@@ -430,6 +430,21 @@ double* windowArray(const double Radius, const double theta)
         else if(KernelFunc == 1) WindowFunction = WindowFunction_Sphere;
         else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
     
+        int FINE {10};
+        int lsize = ceil(sqrt(3.)*(GridLen+1))*FINE;
+        double* wFiner = new double[lsize];
+
+        if(KernelFunc == 0) {
+        for(int i = 0; i < lsize; ++i){
+            double phase = TWOPI * RGrid * i*DeltaXi/FINE;
+            wFiner[i] = sin(TWOPI * RGrid * i*DeltaXi/FINE)/(TWOPI * RGrid * i*DeltaXi/FINE);
+        }
+            wFiner[0]=1;
+        }
+        else if(KernelFunc == 1) {
+            
+        }
+        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
         #pragma omp parallel for
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
