@@ -423,7 +423,7 @@ double* windowArray(const double Radius, const double theta)
 
     auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
 
-    if(KernelFunc <= 2)
+    if(KernelFunc <= 3)
     {
         double (*WindowFunction)(double, double, double, double){nullptr};
         if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
@@ -435,21 +435,41 @@ double* windowArray(const double Radius, const double theta)
         double* wFiner = new double[lsize];
 
         if(KernelFunc == 0) {
-        for(int i = 0; i < lsize; ++i){
-            double phase = TWOPI * RGrid * i*DeltaXi/FINE;
-            wFiner[i] = sin(TWOPI * RGrid * i*DeltaXi/FINE)/(TWOPI * RGrid * i*DeltaXi/FINE);
-        }
-            wFiner[0]=1;
+            for(int i = 0; i < lsize; ++i){
+                double phase = TWOPI * RGrid * i*DeltaXi/FINE;
+                wFiner[i] = sin(phase)/(phase);
+            }
+            wFiner[0] = 1;
         }
         else if(KernelFunc == 1) {
-            
+            for(int i = 0; i < lsize; ++i){
+                double phase = TWOPI * RGrid * i*DeltaXi/FINE;
+                wFiner[i] = 3*(sin(phase)-phase*cos(phase))/(pow(phase,3));
+            }
+            wFiner[0] = 1;
         }
-        else if(KernelFunc == 2) WindowFunction = WindowFunction_Gaussian;
+        else if(KernelFunc == 2) {
+            for(int i = 0; i < lsize; ++i){
+                double phase = TWOPI * RGrid * i*DeltaXi/FINE;
+                wFiner[i] = pow(1/M_E,phase*phase/2);
+            }
+        }
+        else if(KernelFunc == 3) {
+            const double R2Grid {theta * GridLen/SimBoxL};
+
+            for(int i = 0; i < lsize; ++i){
+                double phase1 = TWOPI * RGrid * i*DeltaXi/FINE;
+                double phase2 = TWOPI * R2Grid * i*DeltaXi/FINE;
+                wFiner[i] = 3*(sin(phase2)-phase2*cos(phase2)-sin(phase1)+phase1*cos(phase1))/(pow(phase2,3)-pow(phase1,3));
+            }
+            wFiner[0] = 1;
+        }
         #pragma omp parallel for
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
                 for(size_t k = 0; k <= GridLen; ++k)
-                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = WindowFunction(RGrid, i * DeltaXi, j * DeltaXi, k * DeltaXi);
+                    WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = wFiner[sqrt()]
+                    WindowFunction(RGrid, i * DeltaXi, j * DeltaXi, k * DeltaXi);
     }
     else if(KernelFunc == 3)
     {
