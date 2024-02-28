@@ -412,7 +412,6 @@ double* PowerSpectrum(std::vector<double>& v, double k0, double k1, size_t N_k)
 
 
 
-
 //=======================================================================================
 // window array (convolution kernel)
 //=======================================================================================
@@ -423,7 +422,7 @@ double* windowArray(const double Radius, const double theta)
 
     auto WindowArray = new double[(GridLen+1) * (GridLen+1) * (GridLen+1)];
 
-    if(KernelFunc <= 3)
+    if(KernelFunc <= 6)
     {
         //double (*WindowFunction)(double, double, double, double){nullptr};
         //if(KernelFunc == 0) WindowFunction = WindowFunction_Shell;
@@ -467,6 +466,14 @@ double* windowArray(const double Radius, const double theta)
             }
             wFiner[0] = 1;
         }
+        else if(KernelFunc == 4) { // Gaussian Direvative Wavelet
+            const double Norm = pow(2,7./4)/sqrt(15)*pow(TWOPI,3./4)*pow(Radius,3./2);
+            #pragma omp parallel for
+            for(int i = 0; i < lsize; ++i){
+                double phase = TWOPI * RGrid * i*DeltaXi/FINE;
+                wFiner[i] = Norm * pow(phase,2) * pow(1/M_E,phase*phase/2);
+            }
+        }
         #pragma omp parallel for
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
@@ -477,7 +484,7 @@ double* windowArray(const double Radius, const double theta)
                 }
         delete[] wFiner;
     }
-    else if(KernelFunc == 4) // dual-ring
+    else if(KernelFunc == 7) // dual-ring
     {
         double fz[GridLen+1];
         double dXitwo{pow(DeltaXi,2)};
@@ -496,7 +503,7 @@ double* windowArray(const double Radius, const double theta)
                     WindowArray[i * (GridLen+1) * (GridLen+1) + j * (GridLen+1) + k] = fxy[i * (GridLen+1) + j] * fz[k]; 
         delete[] fxy;
     }
-    else if(KernelFunc == 5) // cylinder
+    else if(KernelFunc == 8) // cylinder
     {
         double fz[GridLen+1];
         double dXitwo{pow(DeltaXi,2)};

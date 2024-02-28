@@ -11,13 +11,17 @@ int main()
     auto s = sfc(p);
     auto sc = sfc_r2c(s,false);
 
+    auto pk_plus = densityVarianceArray(sc);
+
     for(auto R : vec_R){
-        force_kernel_type(1);
+        force_kernel_type(2);
         auto w_smth = wfc(R,0);
-        auto s_smth = convol3d(convol3d(s,w_smth,false),w_smth,false);
+        auto sc_smth = convol_c2c(sc,w_smth);
+        //auto s_smth = convol3d(convol3d(s,w_smth,false),w_smth,false);
 
         force_kernel_type(0);
         for(auto r : vec_r){
+            
             auto w = wfc(r,0);
             auto c = convol_c2r(sc,w);
             double dd = inner_product(c,s_smth,GridVol);

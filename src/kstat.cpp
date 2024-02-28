@@ -11,7 +11,7 @@ int main(){
     int Rmax{20};
     std::vector<double> vec_R, cv_RE, cv_pk, cv_lean; for(int i = 1; i <= Rmax; ++i) vec_R.push_back(i);
 
-     auto pk_plus = densityCovarianceArray(sc_dm,sc_hl);
+    auto pk_plus = densityCovarianceArray(sc_dm,sc_hl);
 
 std::chrono::steady_clock::time_point begin0 = std::chrono::steady_clock::now();
     for(auto r : vec_R){

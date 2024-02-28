@@ -342,3 +342,4 @@ double correlation_coefficients(fftw_complex* sc1, fftw_complex* sc2, double* wp
 
     return cc;
 }
+
