@@ -8,4 +8,4 @@ std::vector<Particle> default_random_particle(double Lx, double Ly, double Lz, s
 void fill_index_set(const double R, std::vector<Index>& inner_index, std::vector<Index>& cross_index);
 double* count_in_sphere(const double R, std::vector<Particle>& p, std::vector<Particle>& p0);
 double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vector<Particle>& p0);
-std::vector<double> win_theory(std::string kernel, double R);
+std::vector<double> win_theory(std::string kernel, double R, double theta);

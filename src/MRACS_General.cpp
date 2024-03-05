@@ -176,7 +176,7 @@ double* count_in_cylinder(double R, double H, std::vector<Particle>& p, std::vec
 // sampling the window fourier from [1e-4,10] with delta_k = 1e-4
 // combine with Pk_theory value to calculate the theoretical second order statistics
 // kernel can be "shell" "Gaussian","sphere","GDW"
-std::vector<double> win_theory(std::string kernel, double R)
+std::vector<double> win_theory(std::string kernel, double R, double theta)
 {
     const double k_min = 1e-4; //radian frequency
     const double k_max = 10;
@@ -213,6 +213,13 @@ std::vector<double> win_theory(std::string kernel, double R)
             win[i] = norm * pow(phase,2) * pow(1/M_E,phase*phase/2);
         }
     }
-
+    else if(kernel == "ThickShell") {
+        #pragma omp parallel for
+        for(int i = 0; i < klen; ++i){
+            double phase1 = (i+1)*dk*R;
+            double phase2 = (i+1)*dk*theta;
+            win[i] = 3*(sin(phase2)-phase2*cos(phase2)-sin(phase1)+phase1*cos(phase1))/(pow(phase2,3)-pow(phase1,3));
+        }
+    }
     return win;
 }

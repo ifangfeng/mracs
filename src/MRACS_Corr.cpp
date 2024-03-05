@@ -156,7 +156,7 @@ double* densityVarianceArray(fftw_complex* sc)
 // to have P(k) as function of scalar module k, notice that sfc function do the 
 // assignment step exactly
 // ************************************************************************************
-double* densityPowerFFT(fftw_complex* sc)
+double* densityPowerFFT(fftw_complex* sc, bool DENOISE)
 {
     const double npart = sc[0][0];
     const int64_t PkASize {(GridLen/2 + 1) * GridLen * GridLen};
@@ -191,13 +191,17 @@ double* densityPowerFFT(fftw_complex* sc)
     }
     Pk[0]=0;
 
+    if(DENOISE){
+        for(int i = 1; i < klen; ++i) Pk[i] -= pow(SimBoxL,3) / npart;
+    }
+
     return Pk;
 }
 
 //=======================================================================================
 // calculate density power spectrum using projected density fileds mathematically
 //=======================================================================================
-double* densityPowerDWT(fftw_complex* sc)
+double* densityPowerDWT(fftw_complex* sc, bool DENOISE)
 {
     const double npart = sc[0][0];
     double* Pk_array = new double[(GridLen/2 + 1) * GridLen * GridLen];
@@ -240,6 +244,10 @@ double* densityPowerDWT(fftw_complex* sc)
         
     }
     Pk[0]=0;
+
+    if(DENOISE){
+        for(int i = 1; i < klen; ++i) Pk[i] -= pow(SimBoxL,3) / npart;
+    }
    
     return Pk;
 }

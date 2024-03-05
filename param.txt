@@ -1,15 +1,15 @@
 %---MRA_Resolution
-Resolution                      8
+Resolution                      9
 
 %---Base_Function_Type
-BaseType                        1 % _0_BSpline,_1_Daubechies
+BaseType                        0 % _0_BSpline,_1_Daubechies
 
 %---Wavelet_phi_Genus
-phiGenus                        4
+phiGenus                        5
 SampRate                        1000
 
 %---Convolution_Kernel
-KernelFunc                      0 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-TShell:4-Ring:5-cylinder
+KernelFunc                      0 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-TShell:4-GDW:7-Ring:8-cylinder
 Radius                          15 % Mpc/h
 
 %---Main_Directory
@@ -17,7 +17,7 @@ DIREC                           .
 
 %---Particle_data
 DataDirec                       /data0/MDPL2/dm_sub/dm_sub5e-5.bin
-SimBoxL                         2500 % Mpc/h
+SimBoxL                         1000 % Mpc/h
 
 %---Number_of_threads_used
 Threads                         128
