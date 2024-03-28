@@ -11,7 +11,7 @@ int main(){
     auto hl = read_in_Halo_4vector("/data0/MDPL2/halo_Mcut2e12.bin");
 
     force_resoluton_J(10);
-    force_base_type(0,1);
+    force_base_type(1,4);
     force_kernel_type(2);
 
     auto vec_GSR = linear_scale_generator(1,10,10,true);

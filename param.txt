@@ -1,5 +1,5 @@
 %---MRA_Resolution
-Resolution                      9
+Resolution                      7
 
 %---Base_Function_Type
 BaseType                        0 % _0_BSpline,_1_Daubechies
@@ -17,7 +17,7 @@ DIREC                           .
 
 %---Particle_data
 DataDirec                       /data0/MDPL2/dm_sub/dm_sub5e-5.bin
-SimBoxL                         1000 % Mpc/h
+SimBoxL                         100 % Mpc/h
 
 %---Number_of_threads_used
 Threads                         128

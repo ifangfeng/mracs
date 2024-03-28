@@ -7,7 +7,8 @@ int main(){
     read_parameter();
     //auto p = default_random_particle(SimBoxL,5);
     std::vector<Particle> p; p.push_back({20,20,0,1});p.push_back({26,26,0,1});p.push_back({50,72,0,1});
-    p.push_back({68,32,0,1});p.push_back({88,96,0,1});
+    p.push_back({68,32,0,1});p.push_back({8,64,0,1}); p.push_back({6,82,0,1});p.push_back({20,80,0,1});
+    p.push_back({88,96,0,1});p.push_back({88,60,0,1});p.push_back({16,72,0,1});
 
     std::vector<Particle> p0;
     const int ng{800};
