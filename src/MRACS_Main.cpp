@@ -474,6 +474,17 @@ double* windowArray(const double Radius, const double theta)
                 wFiner[i] = Norm * pow(phase,2) * pow(1/M_E,phase*phase/2);
             }
         }
+        else if(KernelFunc == 5) { // Gaussian-like Shell
+            const double AGrid {theta * GridLen/SimBoxL};
+            #pragma omp parallel for
+            for(int i = 0; i < lsize; ++i){
+                double phase1 = TWOPI * RGrid * i*DeltaXi/FINE;
+                double phase2 = TWOPI * AGrid * i*DeltaXi/FINE;
+                wFiner[i] = (AGrid * AGrid * cos(phase1) + RGrid * RGrid * sin(phase1)/phase1)
+                            /(RGrid * RGrid + AGrid * AGrid) * pow(1/M_E,phase2 * phase2 / 2);
+            }
+            wFiner[0] = 1;
+        }
         #pragma omp parallel for
         for(size_t i = 0; i <= GridLen; ++i)
             for(size_t j = 0; j <= GridLen; ++j)
