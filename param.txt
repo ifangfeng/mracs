@@ -9,7 +9,7 @@ phiGenus                        5
 SampRate                        1000
 
 %---Convolution_Kernel
-KernelFunc                      5 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-TShell:4-GDW:5-GLS:7-Ring:8-cylinder
+KernelFunc                      1 % Kernel_type,0-Shell:1-Sphere:2-Gaussian:3-TShell:4-GDW:5-GLS:7-Ring:8-cylinder
 Radius                          15 % Mpc/h
 
 %---Main_Directory
